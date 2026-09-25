@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>فريق العمل - إدارة المهام</title>
+  <!-- Tailwind CSS & الخطوط -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- مكتبة Supabase ومكتبة الاحتفال -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    body { font-family: 'Cairo', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+  <!-- ================= شاشة تسجيل الدخول السريع (PIN) ================= -->
+  <div id="loginScreen" class="fixed inset-0 bg-slate-900 flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
+      <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
+        ⚡
+      </div>
+      <h2 class="text-2xl font-bold mb-2">من يدخل الآن؟</h2>
+      <p class="text-slate-500 text-sm mb-6">اكتب رقم الـ PIN الخاص بك</p>
+      
+      <input type="password" id="pinInput" maxlength="1" placeholder="•" 
+        class="w-24 h-20 text-center text-4xl font-bold bg-slate-100 border-2 border-slate-300 rounded-2xl focus:border-blue-500 focus:bg-white outline-none mb-6 transition"
+        onkeyup="if(event.key === 'Enter') handleLogin()">
+      
+      <button onclick="handleLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-blue-500/30">
+        دخول
+      </button>
+
+      <div class="mt-6 text-xs text-slate-400 bg-slate-50 py-3 rounded-lg border border-slate-100 grid grid-cols-2 gap-2 text-right px-4">
+        <div>1: Doc 👨‍⚕️</div>
+        <div>2: Hesham 💼</div>
+        <div>3: Shady 💻</div>
+        <div>4: Hossam 📊</div>
+        <div class="col-span-2 text-center border-t pt-1">5: Hassan 🎨</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= التطبيق الرئيسي ================= -->
+  <div id="app" class="hidden max-w-md mx-auto pb-28">
+    
+    <!-- شريط علوي -->
+    <header class="bg-white p-4 sticky top-0 z-10 border-b border-slate-200 flex justify-between items-center shadow-sm">
+      <div class="flex items-center gap-3">
+        <div id="userAvatar" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow"></div>
+        <div>
+          <span class="text-[11px] text-slate-400 block font-semibold">مرحباً بك</span>
+          <span id="userName" class="font-bold text-slate-800 text-base"></span>
+        </div>
+      </div>
+      <button onclick="logout()" class="text-xs text-red-500 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100 font-semibold hover:bg-red-100">
+        خروج
+      </button>
+    </header>
+
+    <!-- الفلاتر -->
+    <div class="p-4">
+      <div class="flex bg-slate-200/70 p-1 rounded-xl">
+        <button id="tabMyTasks" onclick="setFilter('my')" class="flex-1 py-2 text-sm font-bold rounded-lg transition text-slate-600">
+          🎯 مهامي أنا (<span id="myCount">0</span>)
+        </button>
+        <button id="tabAllTasks" onclick="setFilter('all')" class="flex-1 py-2 text-sm font-bold rounded-lg transition bg-white text-blue-600 shadow-sm">
+          👥 كل المهام (<span id="allCount">0</span>)
+        </button>
+      </div>
+    </div>
+
+    <!-- القوائم -->
+    <div class="px-4 space-y-6">
+      
+      <!-- قيد الانتظار -->
+      <div>
+        <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+            قيد الانتظار (Pending)
+          </span>
+          <span id="pendingCountBadge" class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md font-bold">0</span>
+        </h3>
+        <div id="pendingList" class="space-y-3">
+          <div class="text-center py-6 text-slate-400 text-sm">جاري جلب المهام...</div>
+        </div>
+      </div>
+
+      <!-- المنجزة -->
+      <div>
+        <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center justify-between">
+          <span class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+            تمت بنجاح (Done)
+          </span>
+          <span id="doneCountBadge" class="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold">0</span>
+        </h3>
+        <div id="doneList" class="space-y-3"></div>
+      </div>
+
+    </div>
+
+    <!-- زرار إضافة مهمة -->
+    <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent">
+      <button onclick="openModal()" class="max-w-md mx-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-xl shadow-blue-500/40 flex items-center justify-center gap-2 transition active:scale-95">
+        <span class="text-2xl leading-none">+</span>
+        <span>تكليف بمهمة جديدة</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ================= نافذة إضافة مهمة جديدة ================= -->
+  <div id="taskModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg text-slate-800">إسناد مهمة جديدة ✍️</h3>
+        <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs font-bold text-slate-500 block mb-1">المهمة المطلوبة</label>
+          <input type="text" id="taskTitle" placeholder="مثال: مراجعة حسابات العميل..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 text-sm font-semibold">
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-slate-500 block mb-1">مطلوبة من مين؟</label>
+          <select id="taskAssignee" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 text-sm font-bold text-slate-700"></select>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-slate-500 block mb-1">درجة الأهمية</label>
+          <div class="flex gap-3">
+            <label class="flex-1 border border-slate-200 rounded-xl p-2.5 flex items-center justify-center gap-2 cursor-pointer has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
+              <input type="radio" name="priority" value="high" class="accent-red-500">
+              <span class="text-xs font-bold text-red-600">🔴 عاجل جداً</span>
+            </label>
+            <label class="flex-1 border border-slate-200 rounded-xl p-2.5 flex items-center justify-center gap-2 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+              <input type="radio" name="priority" value="normal" checked class="accent-blue-500">
+              <span class="text-xs font-bold text-blue-600">🟡 عادي</span>
+            </label>
+          </div>
+        </div>
+
+        <button onclick="addTask()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-blue-500/30">
+          إرسال المهمة الآن 🚀
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= السكريبت وقاعدة البيانات ================= -->
+  <script>
+    // بياناتك الخاصة بقاعدة البيانات تم ربطها هنا مباشرة
+    const SUPABASE_URL = "https://bdslcbvidzhofknfbtpp.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_5YTUHYxJsQhs6mQcCYeAUg_rdB_WS1O";
+
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const USERS = [
+      { id: 1, pin: "1", name: "Doc", color: "bg-emerald-600" },
+      { id: 2, pin: "2", name: "Hesham", color: "bg-blue-600" },
+      { id: 3, pin: "3", name: "Shady", color: "bg-purple-600" },
+      { id: 4, pin: "4", name: "Hossam", color: "bg-amber-600" },
+      { id: 5, pin: "5", name: "Hassan", color: "bg-rose-600" }
+    ];
+
+    let currentUser = null;
+    let currentFilter = 'all';
+    let tasks = [];
+
+    // تحميل المهام من السيرفر
+    async function loadTasks() {
+      try {
+        const { data, error } = await db.from('tasks').select('*').order('id', { ascending: false });
+        if (error) throw error;
+        tasks = data || [];
+        render();
+      } catch (err) {
+        console.error("خطأ في جلب المهام:", err.message);
+      }
+    }
+
+    // الاستماع للتحديثات اللحظية (Real-time لجميع أجهزة الفريق)
+    db.channel('realtime_tasks')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+        loadTasks();
+      })
+      .subscribe();
+
+    // فحص تلقائي لتسجيل الدخول المحفوظ
+    window.addEventListener('DOMContentLoaded', () => {
+      const savedUser = localStorage.getItem('team_logged_user');
+      if (savedUser) {
+        initUserSession(JSON.parse(savedUser));
+      }
+    });
+
+    function handleLogin() {
+      const pin = document.getElementById('pinInput').value.trim();
+      const user = USERS.find(u => u.pin === pin);
+      
+      if (user) {
+        localStorage.setItem('team_logged_user', JSON.stringify(user));
+        initUserSession(user);
+      } else {
+        alert("رقم الـ PIN غير صحيح! (الأرقام من 1 إلى 5)");
+      }
+    }
+
+    function initUserSession(user) {
+      currentUser = user;
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      document.getElementById('userName').innerText = user.name;
+      
+      const avatar = document.getElementById('userAvatar');
+      avatar.innerText = user.name.charAt(0);
+      avatar.className = `w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow ${user.color}`;
+      
+      populateAssignees();
+      loadTasks();
+    }
+
+    function logout() {
+      localStorage.removeItem('team_logged_user');
+      currentUser = null;
+      document.getElementById('pinInput').value = '';
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('app').classList.add('hidden');
+    }
+
+    function populateAssignees() {
+      const select = document.getElementById('taskAssignee');
+      select.innerHTML = USERS.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+    }
+
+    async function addTask() {
+      const title = document.getElementById('taskTitle').value.trim();
+      const assigned_to = parseInt(document.getElementById('taskAssignee').value);
+      const priority = document.querySelector('input[name="priority"]:checked').value;
+
+      if (!title) return alert("من فضلك اكتب عنوان المهمة!");
+
+      const newTask = {
+        title,
+        assigned_to,
+        created_by: currentUser.id,
+        priority,
+        status: "pending"
+      };
+
+      closeModal();
+      document.getElementById('taskTitle').value = '';
+
+      const { error } = await db.from('tasks').insert([newTask]);
+      if (error) alert("حدث خطأ أثناء إضافة المهمة: " + error.message);
+    }
+
+    // إنهاء المهمة (للشخص المكلف بها فقط)
+    async function completeTask(id) {
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.7 }
+      });
+
+      const { error } = await db.from('tasks').update({ status: 'done' }).eq('id', id);
+      if (error) alert("خطأ: " + error.message);
+    }
+
+    // إعادة فتح المهمة
+    async function reopenTask(id) {
+      const { error } = await db.from('tasks').update({ status: 'pending' }).eq('id', id);
+      if (error) alert("خطأ: " + error.message);
+    }
+
+    // حذف المهمة
+    async function deleteTask(id) {
+      if (!confirm("هل أنت متأكد من حذف هذه المهمة نهائياً؟")) return;
+      const { error } = await db.from('tasks').delete().eq('id', id);
+      if (error) alert("خطأ: " + error.message);
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.getElementById('tabAllTasks').className = filter === 'all' 
+        ? "flex-1 py-2 text-sm font-bold rounded-lg transition bg-white text-blue-600 shadow-sm" 
+        : "flex-1 py-2 text-sm font-bold rounded-lg transition text-slate-600";
+
+      document.getElementById('tabMyTasks').className = filter === 'my' 
+        ? "flex-1 py-2 text-sm font-bold rounded-lg transition bg-white text-blue-600 shadow-sm" 
+        : "flex-1 py-2 text-sm font-bold rounded-lg transition text-slate-600";
+
+      render();
+    }
+
+    function render() {
+      const pendingList = document.getElementById('pendingList');
+      const doneList = document.getElementById('doneList');
+      
+      const filtered = tasks.filter(t => currentFilter === 'all' ? true : t.assigned_to === currentUser.id);
+      const pendingTasks = filtered.filter(t => t.status === 'pending');
+      const doneTasks = filtered.filter(t => t.status === 'done');
+
+      document.getElementById('allCount').innerText = tasks.filter(t => t.status === 'pending').length;
+      document.getElementById('myCount').innerText = tasks.filter(t => t.assigned_to === currentUser.id && t.status === 'pending').length;
+      document.getElementById('pendingCountBadge').innerText = pendingTasks.length;
+      document.getElementById('doneCountBadge').innerText = doneTasks.length;
+
+      // Pending
+      pendingList.innerHTML = pendingTasks.length === 0 
+        ? `<div class="p-8 text-center text-slate-400 text-sm bg-white rounded-2xl border border-dashed border-slate-200">لا توجد مهام معلقة.. عاش يا شباب! 👏</div>`
+        : pendingTasks.map(t => renderCard(t)).join('');
+
+      // Done
+      doneList.innerHTML = doneTasks.length === 0 
+        ? `<div class="p-4 text-center text-slate-400 text-xs">لا يوجد مهام منجزة حتى الآن</div>`
+        : doneTasks.map(t => renderCard(t)).join('');
+    }
+
+    function renderCard(task) {
+      const assignee = USERS.find(u => u.id === task.assigned_to);
+      const creator = USERS.find(u => u.id === task.created_by);
+      const isMyTask = task.assigned_to === currentUser.id;
+      const amICreator = task.created_by === currentUser.id;
+      const isDone = task.status === 'done';
+
+      return `
+        <div class="bg-white p-4 rounded-2xl border ${isMyTask && !isDone ? 'border-blue-300 ring-2 ring-blue-50 shadow-md' : 'border-slate-200/80 shadow-sm'} flex flex-col gap-3 transition">
+          
+          <div class="flex justify-between items-start">
+            <span class="text-[11px] px-2.5 py-0.5 rounded-md font-bold ${task.priority === 'high' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-600'}">
+              ${task.priority === 'high' ? '🔴 عاجل' : '🟡 عادي'}
+            </span>
+
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-slate-400">بواسطة: ${creator ? creator.name : 'غير معروف'}</span>
+              ${amICreator ? `
+                <button onclick="deleteTask(${task.id})" title="حذف المهمة" class="text-slate-300 hover:text-red-500 text-xs transition">
+                  🗑️
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <p class="font-bold text-slate-800 text-sm leading-relaxed ${isDone ? 'line-through text-slate-400' : ''}">
+            ${task.title}
+          </p>
+
+          <div class="flex justify-between items-center pt-2.5 border-t border-slate-100 text-xs">
+            <div class="flex items-center gap-1.5">
+              <span class="text-slate-400 text-[10px]">مطلوبة من:</span>
+              <span class="inline-flex items-center gap-1 font-bold text-slate-700">
+                <span class="w-2 h-2 rounded-full ${assignee ? assignee.color : 'bg-gray-400'}"></span>
+                ${assignee ? assignee.name : 'غير محدد'} ${isMyTask ? '<span class="text-[10px] text-blue-600 font-extrabold">(أنت)</span>' : ''}
+              </span>
+            </div>
+
+            <div>
+              ${!isDone ? (
+                isMyTask 
+                  ? `<button onclick="completeTask(${task.id})" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition active:scale-95">✅ تم الإنجاز</button>`
+                  : `<span class="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">⏳ عند ${assignee ? assignee.name : ''}</span>`
+              ) : (
+                isMyTask 
+                  ? `<button onclick="reopenTask(${task.id})" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">↩️ إعادة فتح</button>`
+                  : `<span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">✔️ أنجزها ${assignee ? assignee.name : ''}</span>`
+              )}
+            </div>
+
+          </div>
+
+        </div>
+      `;
+    }
+
+    function openModal() {
+      document.getElementById('taskModal').classList.remove('hidden');
+      document.getElementById('taskModal').classList.add('flex');
+    }
+
+    function closeModal() {
+      document.getElementById('taskModal').classList.add('hidden');
+      document.getElementById('taskModal').classList.remove('flex');
+    }
+  </script>
+</body>
+</html>
