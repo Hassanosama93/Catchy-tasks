@@ -34,11 +34,11 @@
       </button>
 
       <div class="mt-6 text-xs text-slate-400 bg-slate-50 py-3 rounded-lg border border-slate-100 grid grid-cols-2 gap-2 text-right px-4">
-        <div>1: Doc 👨‍⚕️</div>
-        <div>2: Hesham 💼</div>
-        <div>3: Shady 💻</div>
-        <div>4: Hossam 📊</div>
-        <div class="col-span-2 text-center border-t pt-1">5: Hassan 🎨</div>
+        <div>1: Doc </div>
+        <div>2: Hesham </div>
+        <div>3: Shady </div>
+        <div>4: Hossam </div>
+        <div class="col-span-2 text-center border-t pt-1">5: Hassan </div>
       </div>
     </div>
   </div>
@@ -103,7 +103,7 @@
 
     </div>
 
-    <!-- زرار إضافة مهمة -->
+    <!-- زرار إضافة مهمة عائم تحت -->
     <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent">
       <button onclick="openModal()" class="max-w-md mx-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-xl shadow-blue-500/40 flex items-center justify-center gap-2 transition active:scale-95">
         <span class="text-2xl leading-none">+</span>
@@ -145,6 +145,14 @@
           </div>
         </div>
 
+        <!-- خيار إرسال التنبيه على الواتساب -->
+        <div class="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 flex items-center gap-3">
+          <input type="checkbox" id="sendWhatsApp" checked class="w-4 h-4 accent-emerald-600 cursor-pointer">
+          <label for="sendWhatsApp" class="text-xs font-bold text-emerald-800 cursor-pointer select-none">
+            💬 إرسال إشعار في جروب الواتساب فوراً
+          </label>
+        </div>
+
         <button onclick="addTask()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-blue-500/30">
           إرسال المهمة الآن 🚀
         </button>
@@ -154,7 +162,6 @@
 
   <!-- ================= السكريبت وقاعدة البيانات ================= -->
   <script>
-    // بياناتك الخاصة بقاعدة البيانات تم ربطها هنا مباشرة
     const SUPABASE_URL = "https://bdslcbvidzhofknfbtpp.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_5YTUHYxJsQhs6mQcCYeAUg_rdB_WS1O";
 
@@ -172,7 +179,7 @@
     let currentFilter = 'all';
     let tasks = [];
 
-    // تحميل المهام من السيرفر
+    // تحميل المهام
     async function loadTasks() {
       try {
         const { data, error } = await db.from('tasks').select('*').order('id', { ascending: false });
@@ -184,14 +191,14 @@
       }
     }
 
-    // الاستماع للتحديثات اللحظية (Real-time لجميع أجهزة الفريق)
+    // استماع للتحديث اللحظي
     db.channel('realtime_tasks')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
         loadTasks();
       })
       .subscribe();
 
-    // فحص تلقائي لتسجيل الدخول المحفوظ
+    // فحص تسجيل الدخول التلقائي عند فتح الصفحة
     window.addEventListener('DOMContentLoaded', () => {
       const savedUser = localStorage.getItem('team_logged_user');
       if (savedUser) {
@@ -238,12 +245,17 @@
       select.innerHTML = USERS.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
     }
 
+    // إضافة مهمة + تجهيز إشعار الواتساب
     async function addTask() {
       const title = document.getElementById('taskTitle').value.trim();
       const assigned_to = parseInt(document.getElementById('taskAssignee').value);
       const priority = document.querySelector('input[name="priority"]:checked').value;
+      const sendWhatsApp = document.getElementById('sendWhatsApp').checked;
 
       if (!title) return alert("من فضلك اكتب عنوان المهمة!");
+
+      const assignee = USERS.find(u => u.id === assigned_to);
+      const priorityText = priority === 'high' ? '🔴 عاجل جداً' : '🟡 عادي';
 
       const newTask = {
         title,
@@ -256,11 +268,29 @@
       closeModal();
       document.getElementById('taskTitle').value = '';
 
+      // 1. الحفظ في قاعدة البيانات
       const { error } = await db.from('tasks').insert([newTask]);
-      if (error) alert("حدث خطأ أثناء إضافة المهمة: " + error.message);
+      if (error) {
+        alert("حدث خطأ أثناء إضافة المهمة: " + error.message);
+        return;
+      }
+
+      // 2. فتح واتساب إذا كان الخيار مفعلاً
+      if (sendWhatsApp) {
+        const message = `📢 *مهمة جديدة للفريق!*
+📌 *المهمة:* ${title}
+👤 *مطلوبة من:* ${assignee.name}
+✍️ *بواسطة:* ${currentUser.name}
+⚡ *الأولوية:* ${priorityText}
+
+🔗 _تم التسجيل في نظام إدارة المهام_`;
+
+        const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+      }
     }
 
-    // إنهاء المهمة (للشخص المكلف بها فقط)
+    // إنهاء المهمة
     async function completeTask(id) {
       confetti({
         particleCount: 80,
@@ -272,13 +302,13 @@
       if (error) alert("خطأ: " + error.message);
     }
 
-    // إعادة فتح المهمة
+    // إعادة فتح
     async function reopenTask(id) {
       const { error } = await db.from('tasks').update({ status: 'pending' }).eq('id', id);
       if (error) alert("خطأ: " + error.message);
     }
 
-    // حذف المهمة
+    // حذف
     async function deleteTask(id) {
       if (!confirm("هل أنت متأكد من حذف هذه المهمة نهائياً؟")) return;
       const { error } = await db.from('tasks').delete().eq('id', id);
