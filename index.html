@@ -4,16 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>فريق العمل - إدارة المهام</title>
-  <!-- مكتبات الواجهة والخطوط -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <!-- مكتبة Supabase ومكتبة الاحتفال -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     body { font-family: 'Cairo', sans-serif; }
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen">
@@ -62,37 +58,39 @@
       </button>
     </header>
 
-    <!-- فلتر الأشخاص -->
-    <div class="p-4 pb-2">
-      <div class="flex bg-slate-200/80 p-1 rounded-xl">
-        <button id="tabAllTasks" onclick="setUserFilter('all')" class="flex-1 py-2 text-xs font-bold rounded-lg transition bg-white text-blue-600 shadow-sm">
+    <!-- أدوات الفرز والفلترة الأنيقة -->
+    <div class="p-4 space-y-2.5">
+      <!-- زرارين التبديل: الفريق أو أنا -->
+      <div class="flex bg-slate-200/80 p-1 rounded-2xl">
+        <button id="tabAllTasks" onclick="setUserFilter('all')" class="flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-blue-600 shadow-sm">
           👥 كل الفريق (<span id="allCount">0</span>)
         </button>
-        <button id="tabMyTasks" onclick="setUserFilter('my')" class="flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-600">
+        <button id="tabMyTasks" onclick="setUserFilter('my')" class="flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600">
           🎯 مهامي أنا (<span id="myCount">0</span>)
         </button>
       </div>
+
+      <!-- القائمة المنسدلة الأنيقة بسهم لاختيار الحالة -->
+      <div class="relative">
+        <select id="statusSelect" onchange="setStatusFilter(this.value)" 
+          class="w-full bg-white border border-slate-200/90 text-slate-700 text-xs font-bold rounded-xl px-4 py-3 outline-none focus:border-blue-500 shadow-sm appearance-none cursor-pointer">
+          <option value="all">📋 عرض كل الحالات</option>
+          <option value="pending">⏳ قيد الانتظار (Pending)</option>
+          <option value="in_progress">🏃‍♂️ جاري العمل عليها (In Progress)</option>
+          <option value="done">✅ المنتهية (Done)</option>
+        </select>
+        <!-- أيقونة السهم الأنيقة -->
+        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center px-4 text-slate-400">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </div>
+      </div>
     </div>
 
-    <!-- فلتر الحالات الثلاثة -->
-    <div class="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar">
-      <button onclick="setStatusFilter('all')" id="statusFilter-all" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-blue-600 text-white shadow-sm transition">
-        الكل
-      </button>
-      <button onclick="setStatusFilter('pending')" id="statusFilter-pending" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white text-slate-600 border border-slate-200 transition">
-        ⏳ الانتظار (<span id="count-pending">0</span>)
-      </button>
-      <button onclick="setStatusFilter('in_progress')" id="statusFilter-in_progress" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white text-slate-600 border border-slate-200 transition">
-        🏃‍♂️ جاري العمل (<span id="count-in_progress">0</span>)
-      </button>
-      <button onclick="setStatusFilter('done')" id="statusFilter-done" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white text-slate-600 border border-slate-200 transition">
-        ✅ المنجزة (<span id="count-done">0</span>)
-      </button>
-    </div>
-
-    <!-- قائمة المهام المعروضة -->
-    <div class="p-4 space-y-3" id="tasksContainer">
-      <div class="text-center py-10 text-slate-400 text-sm">جاري جلب المهام...</div>
+    <!-- قائمة المهام -->
+    <div class="px-4 space-y-3" id="tasksContainer">
+      <div class="text-center py-12 text-slate-400 text-xs">جاري مزامنة المهام...</div>
     </div>
 
     <!-- زرار إضافة مهمة عائم تحت -->
@@ -162,12 +160,10 @@
         <button onclick="closeCommentsModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
       </div>
 
-      <!-- قائمة التعليقات -->
       <div id="commentsList" class="flex-1 overflow-y-auto space-y-3 py-2 pr-1">
         <div class="text-center py-6 text-slate-400 text-xs">جاري تحميل التعليقات...</div>
       </div>
 
-      <!-- كتابة تعليق -->
       <div class="pt-3 border-t border-slate-100 flex gap-2">
         <input type="text" id="newCommentInput" placeholder="أضف تعليقاً أو استفساراً..." 
           class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-blue-500 font-semibold"
@@ -179,9 +175,8 @@
     </div>
   </div>
 
-  <!-- ================= المحرك البرمجي وقاعدة البيانات ================= -->
+  <!-- ================= الكود البرمجي ومحرك المزامنة ================= -->
   <script>
-    // الرابط النظيف ومفتاح الـ JWT الرسمي الخاص بمشروعك
     const SUPABASE_URL = "https://bdslcbvidzhofknfbtpp.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc2xjYnZpZHpob2ZrbmZidHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyOTQ5OTEsImV4cCI6MjEwNTg3MDk5MX0.-6QqAWtN5115Sbb-bsac1AnDuhEh5x4zoV7Z8kc-rmA";
 
@@ -196,12 +191,13 @@
     ];
 
     let currentUser = null;
-    let userFilter = 'all'; 
-    let statusFilter = 'all'; 
+    let userFilter = 'all';
+    let statusFilter = 'all';
     let tasks = [];
     let activeTaskForComments = null;
+    let lastKnownTaskId = 0; // لتعقب أحدث مهمة بدقة متناهية
 
-    // تشغيل نغمة "Ding! 🔔" المضمونة برمجياً
+    // توليد صوت التنبيه
     let audioCtx = null;
     function playNotificationSound() {
       try {
@@ -212,20 +208,14 @@
         const gain = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // A5
-        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.12); // A5
+        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start();
         osc.stop(audioCtx.currentTime + 0.6);
       } catch(e) { console.log("Sound err:", e); }
-    }
-
-    function requestPushPermission() {
-      if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
-      }
     }
 
     function triggerSystemNotification(taskTitle, creatorName) {
@@ -237,64 +227,50 @@
       }
     }
 
-    // جلب المهام
-    async function loadTasks() {
-      try {
-        const { data, error } = await db.from('tasks').select('*').order('id', { ascending: false });
-        if (error) throw error;
-        tasks = data || [];
-        render();
-      } catch (err) {
-        console.error("Fetch error:", err.message);
-      }
-    }
-
-    // ================= محرك التحديث اللحظي المزدوج المضمون =================
-    // 1. الفحص الدوري الذكي كل ثانيتين ونصف (يضمن التحديث حتى على الهواتف والمتصفحات الضعيفة)
-    async function autoSync() {
+    // ================= محرك المزامنة الفوري الذكي =================
+    async function syncTasks(isFirstLoad = false) {
       if (!currentUser) return;
       try {
         const { data, error } = await db.from('tasks').select('*').order('id', { ascending: false });
-        if (!error && data) {
-          if (tasks.length > 0 && data.length > tasks.length) {
-            const newest = data[0];
-            // لو نزلت مهمة جديدة موجهة لي ولم أكن أنا من أنشأها
-            if (newest.assigned_to === currentUser.id && newest.created_by !== currentUser.id) {
-              playNotificationSound();
-              const creator = USERS.find(u => u.id === newest.created_by);
-              triggerSystemNotification(newest.title, creator ? creator.name : 'أحد الزملاء');
-            }
+        if (error || !data) return;
+
+        // في أول مرة بنسجل أعلى ID موجود
+        if (isFirstLoad) {
+          lastKnownTaskId = data.length > 0 ? Math.max(...data.map(t => t.id)) : 0;
+          tasks = data;
+          render();
+          return;
+        }
+
+        // فحص المهام الجديدة اللي نزلت
+        if (data.length > 0) {
+          const currentMaxId = Math.max(...data.map(t => t.id));
+          if (currentMaxId > lastKnownTaskId) {
+            // مهمة جديدة تماماً نزلت!
+            const newTasks = data.filter(t => t.id > lastKnownTaskId);
+            newTasks.forEach(t => {
+              if (t.assigned_to === currentUser.id && t.created_by !== currentUser.id) {
+                playNotificationSound();
+                const creator = USERS.find(u => u.id === t.created_by);
+                triggerSystemNotification(t.title, creator ? creator.name : 'أحد الزملاء');
+              }
+            });
+            lastKnownTaskId = currentMaxId;
           }
+        }
+
+        // لو فيه أي فرق بين الداتا المعروضة والداتا الحقيقية، اعرض فوراً
+        if (JSON.stringify(tasks) !== JSON.stringify(data)) {
           tasks = data;
           render();
         }
-      } catch(e) {}
+      } catch(e) {
+        console.error("Sync error:", e);
+      }
     }
-    setInterval(autoSync, 2500);
 
-    // 2. البث اللحظي عبر WebSocket
-    try {
-      db.channel('tasks_realtime_channel')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newTask = payload.new;
-            if (currentUser && newTask.assigned_to === currentUser.id && newTask.created_by !== currentUser.id) {
-              playNotificationSound();
-              const creator = USERS.find(u => u.id === newTask.created_by);
-              triggerSystemNotification(newTask.title, creator ? creator.name : 'أحد الزملاء');
-            }
-          }
-          loadTasks();
-        })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_comments' }, (payload) => {
-          if (activeTaskForComments && payload.new.task_id === activeTaskForComments.id) {
-            loadComments(activeTaskForComments.id);
-          }
-        })
-        .subscribe();
-    } catch(e) {
-      console.log("WebSocket fallback enabled");
-    }
+    // فحص كل ثانية ونص (سريع جداً وخفيف تماماً على السيرفر)
+    setInterval(() => syncTasks(false), 1500);
 
     // فحص الجلسة المحفوظة
     window.addEventListener('DOMContentLoaded', () => {
@@ -303,7 +279,7 @@
     });
 
     function handleLogin() {
-      // إيقاظ محرك الصوت عند أول تفاعل من المستخدم
+      // إيقاظ الصوت
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') audioCtx.resume();
 
@@ -328,8 +304,11 @@
       avatar.className = `w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow ${user.color}`;
       
       populateAssignees();
-      loadTasks();
-      requestPushPermission();
+      syncTasks(true); // تحميل أول مرة
+
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
     }
 
     function logout() {
@@ -367,8 +346,14 @@
       closeModal();
       document.getElementById('taskTitle').value = '';
 
-      const { error } = await db.from('tasks').insert([newTask]);
+      const { data, error } = await db.from('tasks').insert([newTask]).select();
       if (error) return alert("خطأ: " + error.message);
+
+      // تحديث فوري محلي
+      if (data && data[0]) {
+        lastKnownTaskId = Math.max(lastKnownTaskId, data[0].id);
+      }
+      syncTasks(false);
 
       if (sendWhatsApp) {
         const message = `📢 *مهمة جديدة للفريق!*
@@ -381,8 +366,6 @@
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
       }
-      
-      loadTasks();
     }
 
     async function updateStatus(id, newStatus) {
@@ -391,39 +374,31 @@
       }
       const { error } = await db.from('tasks').update({ status: newStatus }).eq('id', id);
       if (error) alert("خطأ: " + error.message);
-      loadTasks();
+      syncTasks(false);
     }
 
     async function deleteTask(id) {
       if (!confirm("هل أنت متأكد من حذف هذه المهمة نهائياً؟")) return;
       const { error } = await db.from('tasks').delete().eq('id', id);
       if (error) alert("خطأ: " + error.message);
-      loadTasks();
+      syncTasks(false);
     }
 
     function setUserFilter(filter) {
       userFilter = filter;
       document.getElementById('tabAllTasks').className = filter === 'all' 
-        ? "flex-1 py-2 text-xs font-bold rounded-lg transition bg-white text-blue-600 shadow-sm" 
-        : "flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-600";
+        ? "flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-blue-600 shadow-sm" 
+        : "flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600";
 
       document.getElementById('tabMyTasks').className = filter === 'my' 
-        ? "flex-1 py-2 text-xs font-bold rounded-lg transition bg-white text-blue-600 shadow-sm" 
-        : "flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-600";
+        ? "flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-blue-600 shadow-sm" 
+        : "flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600";
 
       render();
     }
 
     function setStatusFilter(status) {
       statusFilter = status;
-      ['all', 'pending', 'in_progress', 'done'].forEach(s => {
-        const btn = document.getElementById(`statusFilter-${s}`);
-        if (s === status) {
-          btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-blue-600 text-white shadow-sm transition";
-        } else {
-          btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white text-slate-600 border border-slate-200 transition";
-        }
-      });
       render();
     }
 
@@ -435,10 +410,6 @@
       document.getElementById('allCount').innerText = tasks.length;
       document.getElementById('myCount').innerText = myPendingCount;
 
-      document.getElementById('count-pending').innerText = tasks.filter(t => t.status === 'pending').length;
-      document.getElementById('count-in_progress').innerText = tasks.filter(t => t.status === 'in_progress').length;
-      document.getElementById('count-done').innerText = tasks.filter(t => t.status === 'done').length;
-
       let filtered = tasks;
       if (userFilter === 'my') {
         filtered = filtered.filter(t => t.assigned_to === currentUser?.id);
@@ -448,7 +419,7 @@
       }
 
       if (filtered.length === 0) {
-        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm bg-white rounded-2xl border border-dashed border-slate-200">لا توجد مهام في هذا القسم ✨</div>`;
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs bg-white rounded-2xl border border-dashed border-slate-200">لا توجد مهام في هذا الفلتر ✨</div>`;
         return;
       }
 
@@ -531,7 +502,7 @@
       `;
     }
 
-    // ================= نظام التعليقات =================
+    // ================= التعليقات =================
     async function openCommentsModal(taskId) {
       activeTaskForComments = tasks.find(t => t.id === taskId);
       if (!activeTaskForComments) return;
