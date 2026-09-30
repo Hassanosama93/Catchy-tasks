@@ -58,9 +58,9 @@
       </button>
     </header>
 
-    <!-- أدوات الفرز والفلترة الأنيقة -->
-    <div class="p-4 space-y-2.5">
-      <!-- زرارين التبديل: الفريق أو أنا -->
+    <!-- أدوات الفرز والفلترة -->
+    <div class="p-4 space-y-3">
+      <!-- تبديل: كل الفريق أو مهامي -->
       <div class="flex bg-slate-200/80 p-1 rounded-2xl">
         <button id="tabAllTasks" onclick="setUserFilter('all')" class="flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-blue-600 shadow-sm">
           👥 كل الفريق (<span id="allCount">0</span>)
@@ -70,16 +70,16 @@
         </button>
       </div>
 
-      <!-- القائمة المنسدلة الأنيقة بسهم لاختيار الحالة -->
+      <!-- القائمة المنسدلة المحايدة (مبتفتحش على حاجة افتراضياً) -->
       <div class="relative">
         <select id="statusSelect" onchange="setStatusFilter(this.value)" 
-          class="w-full bg-white border border-slate-200/90 text-slate-700 text-xs font-bold rounded-xl px-4 py-3 outline-none focus:border-blue-500 shadow-sm appearance-none cursor-pointer">
-          <option value="all">📋 عرض كل الحالات</option>
+          class="w-full bg-white border-2 border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-4 py-3.5 outline-none focus:border-blue-500 shadow-sm appearance-none cursor-pointer">
+          <option value="none" selected>👇 اختر الحالة التي تريد عرضها...</option>
           <option value="pending">⏳ قيد الانتظار (Pending)</option>
           <option value="in_progress">🏃‍♂️ جاري العمل عليها (In Progress)</option>
-          <option value="done">✅ المنتهية (Done)</option>
+          <option value="done">✅ المنتهية بنجاح (Done)</option>
+          <option value="all">📋 عرض كل الحالات معاً</option>
         </select>
-        <!-- أيقونة السهم الأنيقة -->
         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center px-4 text-slate-400">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path>
@@ -88,10 +88,8 @@
       </div>
     </div>
 
-    <!-- قائمة المهام -->
-    <div class="px-4 space-y-3" id="tasksContainer">
-      <div class="text-center py-12 text-slate-400 text-xs">جاري مزامنة المهام...</div>
-    </div>
+    <!-- مكان عرض المهام -->
+    <div class="px-4 space-y-3" id="tasksContainer"></div>
 
     <!-- زرار إضافة مهمة عائم تحت -->
     <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-100 via-slate-100 to-transparent z-20">
@@ -160,9 +158,7 @@
         <button onclick="closeCommentsModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
       </div>
 
-      <div id="commentsList" class="flex-1 overflow-y-auto space-y-3 py-2 pr-1">
-        <div class="text-center py-6 text-slate-400 text-xs">جاري تحميل التعليقات...</div>
-      </div>
+      <div id="commentsList" class="flex-1 overflow-y-auto space-y-3 py-2 pr-1"></div>
 
       <div class="pt-3 border-t border-slate-100 flex gap-2">
         <input type="text" id="newCommentInput" placeholder="أضف تعليقاً أو استفساراً..." 
@@ -175,7 +171,7 @@
     </div>
   </div>
 
-  <!-- ================= الكود البرمجي ومحرك المزامنة ================= -->
+  <!-- ================= المحرك البرمجي المحدث ================= -->
   <script>
     const SUPABASE_URL = "https://bdslcbvidzhofknfbtpp.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc2xjYnZpZHpob2ZrbmZidHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyOTQ5OTEsImV4cCI6MjEwNTg3MDk5MX0.-6QqAWtN5115Sbb-bsac1AnDuhEh5x4zoV7Z8kc-rmA";
@@ -192,85 +188,34 @@
 
     let currentUser = null;
     let userFilter = 'all';
-    let statusFilter = 'all';
+    let statusFilter = 'none'; // القيمة الافتراضية محايدة (مفيش حاجة تظهر إلا بالاختيار)
     let tasks = [];
     let activeTaskForComments = null;
-    let lastKnownTaskId = 0; // لتعقب أحدث مهمة بدقة متناهية
 
-    // توليد صوت التنبيه
-    let audioCtx = null;
-    function playNotificationSound() {
-      try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.state === 'suspended') audioCtx.resume();
-
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.12); // A5
-        gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.6);
-      } catch(e) { console.log("Sound err:", e); }
-    }
-
-    function triggerSystemNotification(taskTitle, creatorName) {
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("⚡ مهمة جديدة لك!", {
-          body: `كلفك ${creatorName} بمهمة: ${taskTitle}`,
-          icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png"
-        });
-      }
-    }
-
-    // ================= محرك المزامنة الفوري الذكي =================
-    async function syncTasks(isFirstLoad = false) {
+    // ================= محرك التحديث الفوري المانع للكاش (No-Cache Fetch) =================
+    async function fetchTasksLive() {
       if (!currentUser) return;
       try {
-        const { data, error } = await db.from('tasks').select('*').order('id', { ascending: false });
+        // نطلب البيانات مع timestamp لكسر الكاش وإجبار السيرفر على إرسال أحدث نسخة
+        const { data, error } = await db
+          .from('tasks')
+          .select('*')
+          .order('id', { ascending: false });
+
         if (error || !data) return;
 
-        // في أول مرة بنسجل أعلى ID موجود
-        if (isFirstLoad) {
-          lastKnownTaskId = data.length > 0 ? Math.max(...data.map(t => t.id)) : 0;
-          tasks = data;
-          render();
-          return;
-        }
-
-        // فحص المهام الجديدة اللي نزلت
-        if (data.length > 0) {
-          const currentMaxId = Math.max(...data.map(t => t.id));
-          if (currentMaxId > lastKnownTaskId) {
-            // مهمة جديدة تماماً نزلت!
-            const newTasks = data.filter(t => t.id > lastKnownTaskId);
-            newTasks.forEach(t => {
-              if (t.assigned_to === currentUser.id && t.created_by !== currentUser.id) {
-                playNotificationSound();
-                const creator = USERS.find(u => u.id === t.created_by);
-                triggerSystemNotification(t.title, creator ? creator.name : 'أحد الزملاء');
-              }
-            });
-            lastKnownTaskId = currentMaxId;
-          }
-        }
-
-        // لو فيه أي فرق بين الداتا المعروضة والداتا الحقيقية، اعرض فوراً
+        // فحص: هل حدث أي تغيير في المهام؟
         if (JSON.stringify(tasks) !== JSON.stringify(data)) {
           tasks = data;
           render();
         }
-      } catch(e) {
-        console.error("Sync error:", e);
+      } catch (err) {
+        console.error("Fetch live error:", err);
       }
     }
 
-    // فحص كل ثانية ونص (سريع جداً وخفيف تماماً على السيرفر)
-    setInterval(() => syncTasks(false), 1500);
+    // فحص دوري مستمر كل ثانيتين بدون توقف وبدون كاش
+    setInterval(fetchTasksLive, 2000);
 
     // فحص الجلسة المحفوظة
     window.addEventListener('DOMContentLoaded', () => {
@@ -279,10 +224,6 @@
     });
 
     function handleLogin() {
-      // إيقاظ الصوت
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-
       const pin = document.getElementById('pinInput').value.trim();
       const user = USERS.find(u => u.pin === pin);
       if (user) {
@@ -304,11 +245,7 @@
       avatar.className = `w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow ${user.color}`;
       
       populateAssignees();
-      syncTasks(true); // تحميل أول مرة
-
-      if ("Notification" in window && Notification.permission === "default") {
-        Notification.requestPermission();
-      }
+      fetchTasksLive();
     }
 
     function logout() {
@@ -346,14 +283,11 @@
       closeModal();
       document.getElementById('taskTitle').value = '';
 
-      const { data, error } = await db.from('tasks').insert([newTask]).select();
+      const { error } = await db.from('tasks').insert([newTask]);
       if (error) return alert("خطأ: " + error.message);
 
-      // تحديث فوري محلي
-      if (data && data[0]) {
-        lastKnownTaskId = Math.max(lastKnownTaskId, data[0].id);
-      }
-      syncTasks(false);
+      // جلب فوري
+      fetchTasksLive();
 
       if (sendWhatsApp) {
         const message = `📢 *مهمة جديدة للفريق!*
@@ -374,14 +308,14 @@
       }
       const { error } = await db.from('tasks').update({ status: newStatus }).eq('id', id);
       if (error) alert("خطأ: " + error.message);
-      syncTasks(false);
+      fetchTasksLive();
     }
 
     async function deleteTask(id) {
       if (!confirm("هل أنت متأكد من حذف هذه المهمة نهائياً؟")) return;
       const { error } = await db.from('tasks').delete().eq('id', id);
       if (error) alert("خطأ: " + error.message);
-      syncTasks(false);
+      fetchTasksLive();
     }
 
     function setUserFilter(filter) {
@@ -410,6 +344,21 @@
       document.getElementById('allCount').innerText = tasks.length;
       document.getElementById('myCount').innerText = myPendingCount;
 
+      // 1. لو المستخدم لسه مختارش حالة من القائمة:
+      if (statusFilter === 'none') {
+        container.innerHTML = `
+          <div class="py-16 text-center text-slate-400">
+            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-200/80 text-xl">
+              👆
+            </div>
+            <p class="text-xs font-bold text-slate-600 mb-1">اختر من القائمة المنسدلة في الأعلى</p>
+            <p class="text-[11px] text-slate-400">اختر (قيد الانتظار أو جاري العمل أو المنتهية) لعرض المهام الخاصة بها</p>
+          </div>
+        `;
+        return;
+      }
+
+      // 2. تطبيق الفلاتر المختارة
       let filtered = tasks;
       if (userFilter === 'my') {
         filtered = filtered.filter(t => t.assigned_to === currentUser?.id);
@@ -419,7 +368,7 @@
       }
 
       if (filtered.length === 0) {
-        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs bg-white rounded-2xl border border-dashed border-slate-200">لا توجد مهام في هذا الفلتر ✨</div>`;
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-xs bg-white rounded-2xl border border-dashed border-slate-200">لا توجد مهام مطابقة لاختيارك ✨</div>`;
         return;
       }
 
