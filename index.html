@@ -3,20 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>فريق العمل - إدارة المهام</title>
-  <!-- Tailwind CSS & الخطوط -->
+  <title>فريق العمل - إدارة المهام الاحترافية</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
-  <!-- مكتبة Supabase ومكتبة الاحتفال -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     body { font-family: 'Cairo', sans-serif; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+<body class="bg-slate-100 text-slate-800 min-h-screen">
 
-  <!-- ================= شاشة تسجيل الدخول السريع (PIN) ================= -->
+  <!-- ================= شاشة تسجيل الدخول ================= -->
   <div id="loginScreen" class="fixed inset-0 bg-slate-900 flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
       <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
@@ -34,11 +34,11 @@
       </button>
 
       <div class="mt-6 text-xs text-slate-400 bg-slate-50 py-3 rounded-lg border border-slate-100 grid grid-cols-2 gap-2 text-right px-4">
-        <div>1: Doc </div>
-        <div>2: Hesham </div>
-        <div>3: Shady </div>
-        <div>4: Hossam </div>
-        <div class="col-span-2 text-center border-t pt-1">5: Hassan </div>
+        <div>1: Doc 👨‍⚕️</div>
+        <div>2: Hesham 💼</div>
+        <div>3: Shady 💻</div>
+        <div>4: Hossam 📊</div>
+        <div class="col-span-2 text-center border-t pt-1">5: Hassan 🎨</div>
       </div>
     </div>
   </div>
@@ -47,7 +47,7 @@
   <div id="app" class="hidden max-w-md mx-auto pb-28">
     
     <!-- شريط علوي -->
-    <header class="bg-white p-4 sticky top-0 z-10 border-b border-slate-200 flex justify-between items-center shadow-sm">
+    <header class="bg-white p-4 sticky top-0 z-20 border-b border-slate-200 flex justify-between items-center shadow-sm">
       <div class="flex items-center gap-3">
         <div id="userAvatar" class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-lg shadow"></div>
         <div>
@@ -60,52 +60,42 @@
       </button>
     </header>
 
-    <!-- الفلاتر -->
-    <div class="p-4">
-      <div class="flex bg-slate-200/70 p-1 rounded-xl">
-        <button id="tabMyTasks" onclick="setFilter('my')" class="flex-1 py-2 text-sm font-bold rounded-lg transition text-slate-600">
-          🎯 مهامي أنا (<span id="myCount">0</span>)
+    <!-- فلتر الأشخاص -->
+    <div class="p-4 pb-2">
+      <div class="flex bg-slate-200/80 p-1 rounded-xl">
+        <button id="tabAllTasks" onclick="setUserFilter('all')" class="flex-1 py-2 text-xs font-bold rounded-lg transition bg-white text-blue-600 shadow-sm">
+          👥 كل الفريق (<span id="allCount">0</span>)
         </button>
-        <button id="tabAllTasks" onclick="setFilter('all')" class="flex-1 py-2 text-sm font-bold rounded-lg transition bg-white text-blue-600 shadow-sm">
-          👥 كل المهام (<span id="allCount">0</span>)
+        <button id="tabMyTasks" onclick="setUserFilter('my')" class="flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-600">
+          🎯 مهامي أنا (<span id="myCount">0</span>)
         </button>
       </div>
     </div>
 
-    <!-- القوائم -->
-    <div class="px-4 space-y-6">
-      
-      <!-- قيد الانتظار -->
-      <div>
-        <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center justify-between">
-          <span class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
-            قيد الانتظار (Pending)
-          </span>
-          <span id="pendingCountBadge" class="text-xs bg-amber-50 text-amber-700 px-2 py-0.5 rounded-md font-bold">0</span>
-        </h3>
-        <div id="pendingList" class="space-y-3">
-          <div class="text-center py-6 text-slate-400 text-sm">جاري جلب المهام...</div>
-        </div>
-      </div>
+    <!-- فلتر الحالات الثلاثة لمنع الزحمة -->
+    <div class="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar">
+      <button onclick="setStatusFilter('all')" id="statusFilter-all" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-blue-600 text-white shadow-sm transition">
+        الكل
+      </button>
+      <button onclick="setStatusFilter('pending')" id="statusFilter-pending" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white text-slate-600 border border-slate-200 transition">
+        ⏳ الانتظار (<span id="count-pending">0</span>)
+      </button>
+      <button onclick="setStatusFilter('in_progress')" id="statusFilter-in_progress" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white text-slate-600 border border-slate-200 transition">
+        🏃‍♂️ جاري العمل (<span id="count-in_progress">0</span>)
+      </button>
+      <button onclick="setStatusFilter('done')" id="statusFilter-done" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white text-slate-600 border border-slate-200 transition">
+        ✅ المنجزة (<span id="count-done">0</span>)
+      </button>
+    </div>
 
-      <!-- المنجزة -->
-      <div>
-        <h3 class="text-sm font-bold text-slate-500 mb-3 flex items-center justify-between">
-          <span class="flex items-center gap-2">
-            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-            تمت بنجاح (Done)
-          </span>
-          <span id="doneCountBadge" class="text-xs bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-bold">0</span>
-        </h3>
-        <div id="doneList" class="space-y-3"></div>
-      </div>
-
+    <!-- قائمة المهام المعروضة -->
+    <div class="p-4 space-y-3" id="tasksContainer">
+      <div class="text-center py-10 text-slate-400 text-sm">جاري جلب المهام...</div>
     </div>
 
     <!-- زرار إضافة مهمة عائم تحت -->
-    <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent">
-      <button onclick="openModal()" class="max-w-md mx-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-xl shadow-blue-500/40 flex items-center justify-center gap-2 transition active:scale-95">
+    <div class="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-100 via-slate-100 to-transparent z-20">
+      <button onclick="openModal()" class="max-w-md mx-auto w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-xl shadow-blue-500/30 flex items-center justify-center gap-2 transition active:scale-95">
         <span class="text-2xl leading-none">+</span>
         <span>تكليف بمهمة جديدة</span>
       </button>
@@ -123,7 +113,7 @@
       <div class="space-y-4">
         <div>
           <label class="text-xs font-bold text-slate-500 block mb-1">المهمة المطلوبة</label>
-          <input type="text" id="taskTitle" placeholder="مثال: مراجعة حسابات العميل..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 text-sm font-semibold">
+          <input type="text" id="taskTitle" placeholder="اكتب المطلوب بإيجاز..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 text-sm font-semibold">
         </div>
 
         <div>
@@ -136,7 +126,7 @@
           <div class="flex gap-3">
             <label class="flex-1 border border-slate-200 rounded-xl p-2.5 flex items-center justify-center gap-2 cursor-pointer has-[:checked]:border-red-500 has-[:checked]:bg-red-50">
               <input type="radio" name="priority" value="high" class="accent-red-500">
-              <span class="text-xs font-bold text-red-600">🔴 عاجل جداً</span>
+              <span class="text-xs font-bold text-red-600">🔴 عاجل</span>
             </label>
             <label class="flex-1 border border-slate-200 rounded-xl p-2.5 flex items-center justify-center gap-2 cursor-pointer has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
               <input type="radio" name="priority" value="normal" checked class="accent-blue-500">
@@ -145,11 +135,10 @@
           </div>
         </div>
 
-        <!-- خيار إرسال التنبيه على الواتساب -->
         <div class="bg-emerald-50 border border-emerald-200/80 rounded-xl p-3 flex items-center gap-3">
           <input type="checkbox" id="sendWhatsApp" checked class="w-4 h-4 accent-emerald-600 cursor-pointer">
           <label for="sendWhatsApp" class="text-xs font-bold text-emerald-800 cursor-pointer select-none">
-            💬 إرسال إشعار في جروب الواتساب فوراً
+            💬 إرسال إشعار في جروب الواتساب (Tasks)
           </label>
         </div>
 
@@ -160,11 +149,38 @@
     </div>
   </div>
 
+  <!-- ================= نافذة التعليقات والتفاصيل (Comments Modal) ================= -->
+  <div id="commentsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
+        <div>
+          <span id="commentTaskStatusBadge" class="text-[10px] px-2 py-0.5 rounded-md font-bold inline-block mb-1"></span>
+          <h3 id="commentTaskTitle" class="font-bold text-base text-slate-800 leading-snug"></h3>
+        </div>
+        <button onclick="closeCommentsModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+
+      <!-- قائمة الكومنتات السابقة -->
+      <div id="commentsList" class="flex-1 overflow-y-auto space-y-3 py-2 pr-1">
+        <div class="text-center py-6 text-slate-400 text-xs">جاري تحميل التعليقات...</div>
+      </div>
+
+      <!-- كتابة كومنت جديد -->
+      <div class="pt-3 border-t border-slate-100 flex gap-2">
+        <input type="text" id="newCommentInput" placeholder="أضف تعليقاً أو استفساراً..." 
+          class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-blue-500 font-semibold"
+          onkeyup="if(event.key === 'Enter') addComment()">
+        <button onclick="addComment()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition">
+          إرسال
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= السكريبت وقاعدة البيانات ================= -->
   <script>
     const SUPABASE_URL = "https://bdslcbvidzhofknfbtpp.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_5YTUHYxJsQhs6mQcCYeAUg_rdB_WS1O";
-
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const USERS = [
@@ -176,8 +192,45 @@
     ];
 
     let currentUser = null;
-    let currentFilter = 'all';
+    let userFilter = 'all'; // 'all' or 'my'
+    let statusFilter = 'all'; // 'all', 'pending', 'in_progress', 'done'
     let tasks = [];
+    let activeTaskForComments = null;
+
+    // تشغيل نغمة "Ding! 🔔" فوري باستخدام تقنية Web Audio API
+    function playNotificationSound() {
+      try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // نغمة D5
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // نغمة A5
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.6);
+      } catch(e) { console.log("Sound err:", e); }
+    }
+
+    // طلب إذن إشعارات المتصفح
+    function requestPushPermission() {
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+      }
+    }
+
+    // إرسال إشعار نظام حقيقي
+    function triggerSystemNotification(taskTitle, creatorName) {
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("⚡ مهمة جديدة لك!", {
+          body: `كلفك ${creatorName} بمهمة: ${taskTitle}`,
+          icon: "https://cdn-icons-png.flaticon.com/512/906/906334.png"
+        });
+      }
+    }
 
     // تحميل المهام
     async function loadTasks() {
@@ -187,34 +240,44 @@
         tasks = data || [];
         render();
       } catch (err) {
-        console.error("خطأ في جلب المهام:", err.message);
+        console.error("خطأ:", err.message);
       }
     }
 
-    // استماع للتحديث اللحظي
-    db.channel('realtime_tasks')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
+    // الاستماع للتحديثات اللحظية + الإشعار الصوتي
+    db.channel('realtime_workspace')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks' }, (payload) => {
+        const newTask = payload.new;
+        // لو المهمة الجديدة موجهة للشخص الحالي وهو مش اللي عاملها: رن جرس وأظهر إشعار!
+        if (currentUser && newTask.assigned_to === currentUser.id && newTask.created_by !== currentUser.id) {
+          playNotificationSound();
+          const creator = USERS.find(u => u.id === newTask.created_by);
+          triggerSystemNotification(newTask.title, creator ? creator.name : 'أحد الزملاء');
+        }
         loadTasks();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, () => loadTasks())
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tasks' }, () => loadTasks())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_comments' }, (payload) => {
+        if (activeTaskForComments && payload.new.task_id === activeTaskForComments.id) {
+          loadComments(activeTaskForComments.id);
+        }
       })
       .subscribe();
 
-    // فحص تسجيل الدخول التلقائي عند فتح الصفحة
     window.addEventListener('DOMContentLoaded', () => {
       const savedUser = localStorage.getItem('team_logged_user');
-      if (savedUser) {
-        initUserSession(JSON.parse(savedUser));
-      }
+      if (savedUser) initUserSession(JSON.parse(savedUser));
     });
 
     function handleLogin() {
       const pin = document.getElementById('pinInput').value.trim();
       const user = USERS.find(u => u.pin === pin);
-      
       if (user) {
         localStorage.setItem('team_logged_user', JSON.stringify(user));
         initUserSession(user);
       } else {
-        alert("رقم الـ PIN غير صحيح! (الأرقام من 1 إلى 5)");
+        alert("رقم الـ PIN غير صحيح!");
       }
     }
 
@@ -230,6 +293,7 @@
       
       populateAssignees();
       loadTasks();
+      requestPushPermission();
     }
 
     function logout() {
@@ -245,7 +309,6 @@
       select.innerHTML = USERS.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
     }
 
-    // إضافة مهمة + تجهيز إشعار الواتساب
     async function addTask() {
       const title = document.getElementById('taskTitle').value.trim();
       const assigned_to = parseInt(document.getElementById('taskAssignee').value);
@@ -268,14 +331,9 @@
       closeModal();
       document.getElementById('taskTitle').value = '';
 
-      // 1. الحفظ في قاعدة البيانات
       const { error } = await db.from('tasks').insert([newTask]);
-      if (error) {
-        alert("حدث خطأ أثناء إضافة المهمة: " + error.message);
-        return;
-      }
+      if (error) return alert("خطأ: " + error.message);
 
-      // 2. فتح واتساب إذا كان الخيار مفعلاً
       if (sendWhatsApp) {
         const message = `📢 *مهمة جديدة للفريق!*
 📌 *المهمة:* ${title}
@@ -284,72 +342,80 @@
 ⚡ *الأولوية:* ${priorityText}
 
 🔗 _تم التسجيل في نظام إدارة المهام_`;
-
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
       }
     }
 
-    // إنهاء المهمة
-    async function completeTask(id) {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.7 }
-      });
-
-      const { error } = await db.from('tasks').update({ status: 'done' }).eq('id', id);
+    // تغيير الحالات الثلاثة
+    async function updateStatus(id, newStatus) {
+      if (newStatus === 'done') {
+        confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 } });
+      }
+      const { error } = await db.from('tasks').update({ status: newStatus }).eq('id', id);
       if (error) alert("خطأ: " + error.message);
     }
 
-    // إعادة فتح
-    async function reopenTask(id) {
-      const { error } = await db.from('tasks').update({ status: 'pending' }).eq('id', id);
-      if (error) alert("خطأ: " + error.message);
-    }
-
-    // حذف
     async function deleteTask(id) {
       if (!confirm("هل أنت متأكد من حذف هذه المهمة نهائياً؟")) return;
       const { error } = await db.from('tasks').delete().eq('id', id);
       if (error) alert("خطأ: " + error.message);
     }
 
-    function setFilter(filter) {
-      currentFilter = filter;
+    // إدارة الفلاتر
+    function setUserFilter(filter) {
+      userFilter = filter;
       document.getElementById('tabAllTasks').className = filter === 'all' 
-        ? "flex-1 py-2 text-sm font-bold rounded-lg transition bg-white text-blue-600 shadow-sm" 
-        : "flex-1 py-2 text-sm font-bold rounded-lg transition text-slate-600";
+        ? "flex-1 py-2 text-xs font-bold rounded-lg transition bg-white text-blue-600 shadow-sm" 
+        : "flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-600";
 
       document.getElementById('tabMyTasks').className = filter === 'my' 
-        ? "flex-1 py-2 text-sm font-bold rounded-lg transition bg-white text-blue-600 shadow-sm" 
-        : "flex-1 py-2 text-sm font-bold rounded-lg transition text-slate-600";
+        ? "flex-1 py-2 text-xs font-bold rounded-lg transition bg-white text-blue-600 shadow-sm" 
+        : "flex-1 py-2 text-xs font-bold rounded-lg transition text-slate-600";
 
       render();
     }
 
+    function setStatusFilter(status) {
+      statusFilter = status;
+      ['all', 'pending', 'in_progress', 'done'].forEach(s => {
+        const btn = document.getElementById(`statusFilter-${s}`);
+        if (s === status) {
+          btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-blue-600 text-white shadow-sm transition";
+        } else {
+          btn.className = "px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-white text-slate-600 border border-slate-200 transition";
+        }
+      });
+      render();
+    }
+
     function render() {
-      const pendingList = document.getElementById('pendingList');
-      const doneList = document.getElementById('doneList');
+      const container = document.getElementById('tasksContainer');
       
-      const filtered = tasks.filter(t => currentFilter === 'all' ? true : t.assigned_to === currentUser.id);
-      const pendingTasks = filtered.filter(t => t.status === 'pending');
-      const doneTasks = filtered.filter(t => t.status === 'done');
+      // حساب الإحصائيات
+      const myPendingCount = tasks.filter(t => t.assigned_to === currentUser.id && t.status !== 'done').length;
+      document.getElementById('allCount').innerText = tasks.length;
+      document.getElementById('myCount').innerText = myPendingCount;
 
-      document.getElementById('allCount').innerText = tasks.filter(t => t.status === 'pending').length;
-      document.getElementById('myCount').innerText = tasks.filter(t => t.assigned_to === currentUser.id && t.status === 'pending').length;
-      document.getElementById('pendingCountBadge').innerText = pendingTasks.length;
-      document.getElementById('doneCountBadge').innerText = doneTasks.length;
+      document.getElementById('count-pending').innerText = tasks.filter(t => t.status === 'pending').length;
+      document.getElementById('count-in_progress').innerText = tasks.filter(t => t.status === 'in_progress').length;
+      document.getElementById('count-done').innerText = tasks.filter(t => t.status === 'done').length;
 
-      // Pending
-      pendingList.innerHTML = pendingTasks.length === 0 
-        ? `<div class="p-8 text-center text-slate-400 text-sm bg-white rounded-2xl border border-dashed border-slate-200">لا توجد مهام معلقة.. عاش يا شباب! 👏</div>`
-        : pendingTasks.map(t => renderCard(t)).join('');
+      // تطبيق الفلاتر
+      let filtered = tasks;
+      if (userFilter === 'my') {
+        filtered = filtered.filter(t => t.assigned_to === currentUser.id);
+      }
+      if (statusFilter !== 'all') {
+        filtered = filtered.filter(t => t.status === statusFilter);
+      }
 
-      // Done
-      doneList.innerHTML = doneTasks.length === 0 
-        ? `<div class="p-4 text-center text-slate-400 text-xs">لا يوجد مهام منجزة حتى الآن</div>`
-        : doneTasks.map(t => renderCard(t)).join('');
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 text-sm bg-white rounded-2xl border border-dashed border-slate-200">لا توجد مهام في هذا القسم ✨</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(t => renderCard(t)).join('');
     }
 
     function renderCard(task) {
@@ -357,55 +423,161 @@
       const creator = USERS.find(u => u.id === task.created_by);
       const isMyTask = task.assigned_to === currentUser.id;
       const amICreator = task.created_by === currentUser.id;
-      const isDone = task.status === 'done';
+
+      // شكل شارة الحالة
+      let statusBadge = '';
+      if (task.status === 'pending') {
+        statusBadge = `<span class="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 font-bold px-2 py-0.5 rounded-md">⏳ انتظار</span>`;
+      } else if (task.status === 'in_progress') {
+        statusBadge = `<span class="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 font-bold px-2 py-0.5 rounded-md">🏃‍♂️ جاري العمل</span>`;
+      } else {
+        statusBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-2 py-0.5 rounded-md">✅ تمت</span>`;
+      }
+
+      // أزرار التحكم بحسب الصلاحيات والحالة الحالية
+      let actionButtons = '';
+      if (isMyTask) {
+        if (task.status === 'pending') {
+          actionButtons = `<button onclick="updateStatus(${task.id}, 'in_progress')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition active:scale-95">🏃‍♂️ بدء العمل</button>`;
+        } else if (task.status === 'in_progress') {
+          actionButtons = `<button onclick="updateStatus(${task.id}, 'done')" class="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition active:scale-95">✅ تم الإنجاز</button>`;
+        } else {
+          actionButtons = `<button onclick="updateStatus(${task.id}, 'in_progress')" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">↩️ إعادة فتح</button>`;
+        }
+      } else {
+        if (task.status === 'pending') {
+          actionButtons = `<span class="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">⏳ عند ${assignee ? assignee.name : ''}</span>`;
+        } else if (task.status === 'in_progress') {
+          actionButtons = `<span class="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg">🏃‍♂️ ${assignee ? assignee.name : ''} شغال</span>`;
+        } else {
+          actionButtons = `<span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">✔️ أنجزها ${assignee ? assignee.name : ''}</span>`;
+        }
+      }
 
       return `
-        <div class="bg-white p-4 rounded-2xl border ${isMyTask && !isDone ? 'border-blue-300 ring-2 ring-blue-50 shadow-md' : 'border-slate-200/80 shadow-sm'} flex flex-col gap-3 transition">
+        <div class="bg-white p-4 rounded-2xl border ${isMyTask && task.status !== 'done' ? 'border-blue-300 ring-2 ring-blue-50 shadow-md' : 'border-slate-200/80 shadow-sm'} flex flex-col gap-2.5 transition">
           
           <div class="flex justify-between items-start">
-            <span class="text-[11px] px-2.5 py-0.5 rounded-md font-bold ${task.priority === 'high' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-600'}">
-              ${task.priority === 'high' ? '🔴 عاجل' : '🟡 عادي'}
-            </span>
+            <div class="flex items-center gap-1.5">
+              ${statusBadge}
+              <span class="text-[10px] px-2 py-0.5 rounded-md font-bold ${task.priority === 'high' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-500'}">
+                ${task.priority === 'high' ? '🔴 عاجل' : '🟡 عادي'}
+              </span>
+            </div>
 
             <div class="flex items-center gap-2">
-              <span class="text-[10px] text-slate-400">بواسطة: ${creator ? creator.name : 'غير معروف'}</span>
+              <span class="text-[10px] text-slate-400">من: ${creator ? creator.name : ''}</span>
               ${amICreator ? `
-                <button onclick="deleteTask(${task.id})" title="حذف المهمة" class="text-slate-300 hover:text-red-500 text-xs transition">
-                  🗑️
-                </button>
+                <button onclick="deleteTask(${task.id})" title="حذف" class="text-slate-300 hover:text-red-500 text-xs transition">🗑️</button>
               ` : ''}
             </div>
           </div>
 
-          <p class="font-bold text-slate-800 text-sm leading-relaxed ${isDone ? 'line-through text-slate-400' : ''}">
-            ${task.title}
-          </p>
+          <!-- الضغط على النص يفتح التعليقات -->
+          <div onclick="openCommentsModal(${task.id})" class="cursor-pointer group">
+            <p class="font-bold text-slate-800 text-sm leading-relaxed ${task.status === 'done' ? 'line-through text-slate-400' : ''} group-hover:text-blue-600 transition">
+              ${task.title}
+            </p>
+            <span class="text-[11px] text-blue-500 font-semibold inline-flex items-center gap-1 mt-1">
+              💬 عرض التعليقات والملاحظات...
+            </span>
+          </div>
 
           <div class="flex justify-between items-center pt-2.5 border-t border-slate-100 text-xs">
             <div class="flex items-center gap-1.5">
               <span class="text-slate-400 text-[10px]">مطلوبة من:</span>
               <span class="inline-flex items-center gap-1 font-bold text-slate-700">
                 <span class="w-2 h-2 rounded-full ${assignee ? assignee.color : 'bg-gray-400'}"></span>
-                ${assignee ? assignee.name : 'غير محدد'} ${isMyTask ? '<span class="text-[10px] text-blue-600 font-extrabold">(أنت)</span>' : ''}
+                ${assignee ? assignee.name : ''} ${isMyTask ? '<span class="text-[10px] text-blue-600 font-extrabold">(أنت)</span>' : ''}
               </span>
             </div>
 
-            <div>
-              ${!isDone ? (
-                isMyTask 
-                  ? `<button onclick="completeTask(${task.id})" class="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition active:scale-95">✅ تم الإنجاز</button>`
-                  : `<span class="text-[11px] font-semibold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">⏳ عند ${assignee ? assignee.name : ''}</span>`
-              ) : (
-                isMyTask 
-                  ? `<button onclick="reopenTask(${task.id})" class="text-[11px] font-bold text-slate-500 hover:text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">↩️ إعادة فتح</button>`
-                  : `<span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-lg">✔️ أنجزها ${assignee ? assignee.name : ''}</span>`
-              )}
-            </div>
-
+            <div>${actionButtons}</div>
           </div>
 
         </div>
       `;
+    }
+
+    // ================= نظام التعليقات =================
+    async function openCommentsModal(taskId) {
+      activeTaskForComments = tasks.find(t => t.id === taskId);
+      if (!activeTaskForComments) return;
+
+      document.getElementById('commentTaskTitle').innerText = activeTaskForComments.title;
+      
+      const badge = document.getElementById('commentTaskStatusBadge');
+      if (activeTaskForComments.status === 'pending') {
+        badge.className = "text-[10px] bg-amber-50 text-amber-600 border border-amber-200 font-bold px-2 py-0.5 rounded-md inline-block mb-1";
+        badge.innerText = "⏳ قيد الانتظار";
+      } else if (activeTaskForComments.status === 'in_progress') {
+        badge.className = "text-[10px] bg-blue-50 text-blue-600 border border-blue-200 font-bold px-2 py-0.5 rounded-md inline-block mb-1";
+        badge.innerText = "🏃‍♂️ جاري العمل";
+      } else {
+        badge.className = "text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-2 py-0.5 rounded-md inline-block mb-1";
+        badge.innerText = "✅ تمت بنجاح";
+      }
+
+      document.getElementById('commentsModal').classList.remove('hidden');
+      document.getElementById('commentsModal').classList.add('flex');
+      loadComments(taskId);
+    }
+
+    async function loadComments(taskId) {
+      const list = document.getElementById('commentsList');
+      list.innerHTML = `<div class="text-center py-4 text-slate-400 text-xs">جاري تحميل التعليقات...</div>`;
+
+      const { data, error } = await db.from('task_comments').select('*').eq('task_id', taskId).order('id', { ascending: true });
+      if (error) {
+        list.innerHTML = `<div class="text-center text-red-500 text-xs">خطأ في جلب التعليقات</div>`;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        list.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200">لا توجد تعليقات حتى الآن، اكتب أول تعليق!</div>`;
+        return;
+      }
+
+      list.innerHTML = data.map(c => {
+        const author = USERS.find(u => u.id === c.user_id);
+        const isMe = author && author.id === currentUser.id;
+        const time = new Date(c.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+
+        return `
+          <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'}">
+            <div class="flex items-center gap-1.5 mb-1">
+              <span class="text-[10px] font-bold text-slate-600">${author ? author.name : ''}</span>
+              <span class="text-[9px] text-slate-400">${time}</span>
+            </div>
+            <div class="p-2.5 rounded-2xl text-xs max-w-[85%] font-medium ${isMe ? 'bg-blue-600 text-white rounded-tl-none' : 'bg-slate-100 text-slate-800 rounded-tr-none'}">
+              ${c.comment_text}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      list.scrollTop = list.scrollHeight;
+    }
+
+    async function addComment() {
+      const input = document.getElementById('newCommentInput');
+      const text = input.value.trim();
+      if (!text || !activeTaskForComments) return;
+
+      input.value = '';
+      const { error } = await db.from('task_comments').insert([{
+        task_id: activeTaskForComments.id,
+        user_id: currentUser.id,
+        comment_text: text
+      }]);
+
+      if (error) alert("خطأ في إضافة التعليق: " + error.message);
+    }
+
+    function closeCommentsModal() {
+      document.getElementById('commentsModal').classList.add('hidden');
+      document.getElementById('commentsModal').classList.remove('flex');
+      activeTaskForComments = null;
     }
 
     function openModal() {
