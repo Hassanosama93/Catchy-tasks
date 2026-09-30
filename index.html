@@ -3,9 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>فريق العمل - إدارة المهام الاحترافية</title>
+  <title>فريق العمل - إدارة المهام</title>
+  <!-- مكتبات الواجهة والخطوط -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- مكتبة Supabase ومكتبة الاحتفال -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
@@ -16,7 +18,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen">
 
-  <!-- ================= شاشة تسجيل الدخول ================= -->
+  <!-- ================= شاشة تسجيل الدخول السريع (PIN) ================= -->
   <div id="loginScreen" class="fixed inset-0 bg-slate-900 flex items-center justify-center p-4 z-50">
     <div class="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl">
       <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 text-3xl">
@@ -72,7 +74,7 @@
       </div>
     </div>
 
-    <!-- فلتر الحالات الثلاثة لمنع الزحمة -->
+    <!-- فلتر الحالات الثلاثة -->
     <div class="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar">
       <button onclick="setStatusFilter('all')" id="statusFilter-all" class="px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-blue-600 text-white shadow-sm transition">
         الكل
@@ -149,7 +151,7 @@
     </div>
   </div>
 
-  <!-- ================= نافذة التعليقات والتفاصيل (Comments Modal) ================= -->
+  <!-- ================= نافذة التعليقات (Comments Modal) ================= -->
   <div id="commentsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4 z-50">
     <div class="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col max-h-[85vh]">
       <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
@@ -160,12 +162,12 @@
         <button onclick="closeCommentsModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
       </div>
 
-      <!-- قائمة الكومنتات السابقة -->
+      <!-- قائمة التعليقات -->
       <div id="commentsList" class="flex-1 overflow-y-auto space-y-3 py-2 pr-1">
         <div class="text-center py-6 text-slate-400 text-xs">جاري تحميل التعليقات...</div>
       </div>
 
-      <!-- كتابة كومنت جديد -->
+      <!-- كتابة تعليق -->
       <div class="pt-3 border-t border-slate-100 flex gap-2">
         <input type="text" id="newCommentInput" placeholder="أضف تعليقاً أو استفساراً..." 
           class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-xs outline-none focus:border-blue-500 font-semibold"
@@ -177,10 +179,12 @@
     </div>
   </div>
 
-  <!-- ================= السكريبت وقاعدة البيانات ================= -->
+  <!-- ================= المحرك البرمجي وقاعدة البيانات ================= -->
   <script>
+    // الرابط النظيف ومفتاح الـ JWT الرسمي الخاص بمشروعك
     const SUPABASE_URL = "https://bdslcbvidzhofknfbtpp.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJkc2xjYnZpZHpob2ZrbmZidHBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyOTQ5OTEsImV4cCI6MjEwNTg3MDk5MX0.-6QqAWtN5115Sbb-bsac1AnDuhEh5x4zoV7Z8kc-rmA";
+
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const USERS = [
@@ -192,21 +196,24 @@
     ];
 
     let currentUser = null;
-    let userFilter = 'all'; // 'all' or 'my'
-    let statusFilter = 'all'; // 'all', 'pending', 'in_progress', 'done'
+    let userFilter = 'all'; 
+    let statusFilter = 'all'; 
     let tasks = [];
     let activeTaskForComments = null;
 
-    // تشغيل نغمة "Ding! 🔔" فوري باستخدام تقنية Web Audio API
+    // تشغيل نغمة "Ding! 🔔" المضمونة برمجياً
+    let audioCtx = null;
     function playNotificationSound() {
       try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
-        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // نغمة D5
-        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // نغمة A5
-        gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+        osc.frequency.setValueAtTime(880, audioCtx.currentTime + 0.15); // A5
+        gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.6);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
@@ -215,14 +222,12 @@
       } catch(e) { console.log("Sound err:", e); }
     }
 
-    // طلب إذن إشعارات المتصفح
     function requestPushPermission() {
       if ("Notification" in window && Notification.permission === "default") {
         Notification.requestPermission();
       }
     }
 
-    // إرسال إشعار نظام حقيقي
     function triggerSystemNotification(taskTitle, creatorName) {
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification("⚡ مهمة جديدة لك!", {
@@ -232,7 +237,7 @@
       }
     }
 
-    // تحميل المهام
+    // جلب المهام
     async function loadTasks() {
       try {
         const { data, error } = await db.from('tasks').select('*').order('id', { ascending: false });
@@ -240,37 +245,68 @@
         tasks = data || [];
         render();
       } catch (err) {
-        console.error("خطأ:", err.message);
+        console.error("Fetch error:", err.message);
       }
     }
 
-    // الاستماع للتحديثات اللحظية + الإشعار الصوتي
-    db.channel('realtime_workspace')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tasks' }, (payload) => {
-        const newTask = payload.new;
-        // لو المهمة الجديدة موجهة للشخص الحالي وهو مش اللي عاملها: رن جرس وأظهر إشعار!
-        if (currentUser && newTask.assigned_to === currentUser.id && newTask.created_by !== currentUser.id) {
-          playNotificationSound();
-          const creator = USERS.find(u => u.id === newTask.created_by);
-          triggerSystemNotification(newTask.title, creator ? creator.name : 'أحد الزملاء');
+    // ================= محرك التحديث اللحظي المزدوج المضمون =================
+    // 1. الفحص الدوري الذكي كل ثانيتين ونصف (يضمن التحديث حتى على الهواتف والمتصفحات الضعيفة)
+    async function autoSync() {
+      if (!currentUser) return;
+      try {
+        const { data, error } = await db.from('tasks').select('*').order('id', { ascending: false });
+        if (!error && data) {
+          if (tasks.length > 0 && data.length > tasks.length) {
+            const newest = data[0];
+            // لو نزلت مهمة جديدة موجهة لي ولم أكن أنا من أنشأها
+            if (newest.assigned_to === currentUser.id && newest.created_by !== currentUser.id) {
+              playNotificationSound();
+              const creator = USERS.find(u => u.id === newest.created_by);
+              triggerSystemNotification(newest.title, creator ? creator.name : 'أحد الزملاء');
+            }
+          }
+          tasks = data;
+          render();
         }
-        loadTasks();
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tasks' }, () => loadTasks())
-      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'tasks' }, () => loadTasks())
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_comments' }, (payload) => {
-        if (activeTaskForComments && payload.new.task_id === activeTaskForComments.id) {
-          loadComments(activeTaskForComments.id);
-        }
-      })
-      .subscribe();
+      } catch(e) {}
+    }
+    setInterval(autoSync, 2500);
 
+    // 2. البث اللحظي عبر WebSocket
+    try {
+      db.channel('tasks_realtime_channel')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newTask = payload.new;
+            if (currentUser && newTask.assigned_to === currentUser.id && newTask.created_by !== currentUser.id) {
+              playNotificationSound();
+              const creator = USERS.find(u => u.id === newTask.created_by);
+              triggerSystemNotification(newTask.title, creator ? creator.name : 'أحد الزملاء');
+            }
+          }
+          loadTasks();
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_comments' }, (payload) => {
+          if (activeTaskForComments && payload.new.task_id === activeTaskForComments.id) {
+            loadComments(activeTaskForComments.id);
+          }
+        })
+        .subscribe();
+    } catch(e) {
+      console.log("WebSocket fallback enabled");
+    }
+
+    // فحص الجلسة المحفوظة
     window.addEventListener('DOMContentLoaded', () => {
       const savedUser = localStorage.getItem('team_logged_user');
       if (savedUser) initUserSession(JSON.parse(savedUser));
     });
 
     function handleLogin() {
+      // إيقاظ محرك الصوت عند أول تفاعل من المستخدم
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
       const pin = document.getElementById('pinInput').value.trim();
       const user = USERS.find(u => u.pin === pin);
       if (user) {
@@ -345,24 +381,26 @@
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
       }
+      
+      loadTasks();
     }
 
-    // تغيير الحالات الثلاثة
     async function updateStatus(id, newStatus) {
       if (newStatus === 'done') {
         confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 } });
       }
       const { error } = await db.from('tasks').update({ status: newStatus }).eq('id', id);
       if (error) alert("خطأ: " + error.message);
+      loadTasks();
     }
 
     async function deleteTask(id) {
       if (!confirm("هل أنت متأكد من حذف هذه المهمة نهائياً؟")) return;
       const { error } = await db.from('tasks').delete().eq('id', id);
       if (error) alert("خطأ: " + error.message);
+      loadTasks();
     }
 
-    // إدارة الفلاتر
     function setUserFilter(filter) {
       userFilter = filter;
       document.getElementById('tabAllTasks').className = filter === 'all' 
@@ -391,9 +429,9 @@
 
     function render() {
       const container = document.getElementById('tasksContainer');
-      
-      // حساب الإحصائيات
-      const myPendingCount = tasks.filter(t => t.assigned_to === currentUser.id && t.status !== 'done').length;
+      if (!container) return;
+
+      const myPendingCount = tasks.filter(t => t.assigned_to === currentUser?.id && t.status !== 'done').length;
       document.getElementById('allCount').innerText = tasks.length;
       document.getElementById('myCount').innerText = myPendingCount;
 
@@ -401,10 +439,9 @@
       document.getElementById('count-in_progress').innerText = tasks.filter(t => t.status === 'in_progress').length;
       document.getElementById('count-done').innerText = tasks.filter(t => t.status === 'done').length;
 
-      // تطبيق الفلاتر
       let filtered = tasks;
       if (userFilter === 'my') {
-        filtered = filtered.filter(t => t.assigned_to === currentUser.id);
+        filtered = filtered.filter(t => t.assigned_to === currentUser?.id);
       }
       if (statusFilter !== 'all') {
         filtered = filtered.filter(t => t.status === statusFilter);
@@ -421,10 +458,9 @@
     function renderCard(task) {
       const assignee = USERS.find(u => u.id === task.assigned_to);
       const creator = USERS.find(u => u.id === task.created_by);
-      const isMyTask = task.assigned_to === currentUser.id;
-      const amICreator = task.created_by === currentUser.id;
+      const isMyTask = task.assigned_to === currentUser?.id;
+      const amICreator = task.created_by === currentUser?.id;
 
-      // شكل شارة الحالة
       let statusBadge = '';
       if (task.status === 'pending') {
         statusBadge = `<span class="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 font-bold px-2 py-0.5 rounded-md">⏳ انتظار</span>`;
@@ -434,7 +470,6 @@
         statusBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-2 py-0.5 rounded-md">✅ تمت</span>`;
       }
 
-      // أزرار التحكم بحسب الصلاحيات والحالة الحالية
       let actionButtons = '';
       if (isMyTask) {
         if (task.status === 'pending') {
@@ -456,7 +491,6 @@
 
       return `
         <div class="bg-white p-4 rounded-2xl border ${isMyTask && task.status !== 'done' ? 'border-blue-300 ring-2 ring-blue-50 shadow-md' : 'border-slate-200/80 shadow-sm'} flex flex-col gap-2.5 transition">
-          
           <div class="flex justify-between items-start">
             <div class="flex items-center gap-1.5">
               ${statusBadge}
@@ -473,7 +507,6 @@
             </div>
           </div>
 
-          <!-- الضغط على النص يفتح التعليقات -->
           <div onclick="openCommentsModal(${task.id})" class="cursor-pointer group">
             <p class="font-bold text-slate-800 text-sm leading-relaxed ${task.status === 'done' ? 'line-through text-slate-400' : ''} group-hover:text-blue-600 transition">
               ${task.title}
@@ -494,7 +527,6 @@
 
             <div>${actionButtons}</div>
           </div>
-
         </div>
       `;
     }
@@ -505,7 +537,6 @@
       if (!activeTaskForComments) return;
 
       document.getElementById('commentTaskTitle').innerText = activeTaskForComments.title;
-      
       const badge = document.getElementById('commentTaskStatusBadge');
       if (activeTaskForComments.status === 'pending') {
         badge.className = "text-[10px] bg-amber-50 text-amber-600 border border-amber-200 font-bold px-2 py-0.5 rounded-md inline-block mb-1";
@@ -540,7 +571,7 @@
 
       list.innerHTML = data.map(c => {
         const author = USERS.find(u => u.id === c.user_id);
-        const isMe = author && author.id === currentUser.id;
+        const isMe = author && author.id === currentUser?.id;
         const time = new Date(c.created_at).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 
         return `
@@ -572,6 +603,7 @@
       }]);
 
       if (error) alert("خطأ في إضافة التعليق: " + error.message);
+      else loadComments(activeTaskForComments.id);
     }
 
     function closeCommentsModal() {
