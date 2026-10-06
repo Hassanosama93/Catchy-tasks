@@ -58,7 +58,7 @@
       </button>
     </header>
 
-    <!-- أدوات الفرز والفلترة -->
+    <!-- أدوات الفرز والفلترة والبحث -->
     <div class="p-4 space-y-3">
       <!-- تبديل: كل الفريق أو مهامي -->
       <div class="flex bg-slate-200/80 p-1 rounded-2xl">
@@ -70,15 +70,25 @@
         </button>
       </div>
 
-      <!-- القائمة المنسدلة المحايدة (مبتفتحش على حاجة افتراضياً) -->
+      <!-- خانة البحث برقم المهمة أو بالنص -->
+      <div class="relative">
+        <input type="text" id="searchInput" oninput="setSearchQuery(this.value)" placeholder="🔍 ابحث برقم المهمة (مثلاً: 5) أو بنص المهمة..." 
+          class="w-full bg-white border-2 border-slate-200 text-slate-700 text-xs font-bold rounded-2xl pr-10 pl-4 py-3 outline-none focus:border-blue-500 shadow-sm transition">
+        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+        </div>
+      </div>
+
+      <!-- القائمة المنسدلة للفلترة (الافتراضي: المعلقة) -->
       <div class="relative">
         <select id="statusSelect" onchange="setStatusFilter(this.value)" 
           class="w-full bg-white border-2 border-slate-200 text-slate-700 text-xs font-bold rounded-2xl px-4 py-3.5 outline-none focus:border-blue-500 shadow-sm appearance-none cursor-pointer">
-          <option value="none" selected>👇 اختر الحالة التي تريد عرضها...</option>
-          <option value="pending">⏳ قيد الانتظار (Pending)</option>
+          <option value="pending" selected>⏳ المهام المعلقة (Pending)</option>
           <option value="in_progress">🏃‍♂️ جاري العمل عليها (In Progress)</option>
-          <option value="done">✅ المنتهية بنجاح (Done)</option>
-          <option value="all">📋 عرض كل الحالات معاً</option>
+          <option value="done">✅ المهام المنجزة (Done)</option>
+          <option value="all">📋 كل المهام</option>
         </select>
         <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center px-4 text-slate-400">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,8 +120,9 @@
       
       <div class="space-y-4">
         <div>
-          <label class="text-xs font-bold text-slate-500 block mb-1">المهمة المطلوبة</label>
-          <input type="text" id="taskTitle" placeholder="اكتب المطلوب بإيجاز..." class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 text-sm font-semibold">
+          <label class="text-xs font-bold text-slate-500 block mb-1">المهمة المطلوبة (اضغط Enter لنزول سطر جديد)</label>
+          <textarea id="taskTitle" rows="3" placeholder="اكتب المطلوب وتفاصيل المهمة بالتفصيل..." 
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 text-sm font-semibold resize-none"></textarea>
         </div>
 
         <div>
@@ -147,13 +158,34 @@
     </div>
   </div>
 
+  <!-- ================= نافذة نقل المهمة لشخص آخر ================= -->
+  <div id="reassignModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4 z-50">
+    <div class="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-base text-slate-800">تحويل المهمة لزميل آخر 🔄</h3>
+        <button onclick="closeReassignModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+      <p id="reassignTaskTitle" class="text-xs text-slate-500 mb-4 bg-slate-50 p-2.5 rounded-lg border"></p>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs font-bold text-slate-500 block mb-1">اختر الشخص الجديد:</label>
+          <select id="newAssigneeSelect" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 outline-none focus:border-blue-500 text-sm font-bold text-slate-700"></select>
+        </div>
+        <button onclick="confirmReassign()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg shadow-indigo-500/30">
+          تأكيد التحويل الآن 
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= نافذة التعليقات (Comments Modal) ================= -->
   <div id="commentsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-end sm:items-center justify-center p-0 sm:p-4 z-50">
     <div class="bg-white rounded-t-3xl sm:rounded-3xl p-6 w-full max-w-md shadow-2xl flex flex-col max-h-[85vh]">
       <div class="flex justify-between items-start mb-3 border-b border-slate-100 pb-3">
         <div>
           <span id="commentTaskStatusBadge" class="text-[10px] px-2 py-0.5 rounded-md font-bold inline-block mb-1"></span>
-          <h3 id="commentTaskTitle" class="font-bold text-base text-slate-800 leading-snug"></h3>
+          <h3 id="commentTaskTitle" class="font-bold text-base text-slate-800 leading-snug whitespace-pre-wrap"></h3>
         </div>
         <button onclick="closeCommentsModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
       </div>
@@ -188,15 +220,16 @@
 
     let currentUser = null;
     let userFilter = 'all';
-    let statusFilter = 'none'; // القيمة الافتراضية محايدة (مفيش حاجة تظهر إلا بالاختيار)
+    let statusFilter = 'pending';
+    let searchQuery = ''; // متغير البحث برقم المهمة أو النص
     let tasks = [];
     let activeTaskForComments = null;
+    let taskBeingReassigned = null;
 
-    // ================= محرك التحديث الفوري المانع للكاش (No-Cache Fetch) =================
+    // ================= محرك التحديث الفوري =================
     async function fetchTasksLive() {
       if (!currentUser) return;
       try {
-        // نطلب البيانات مع timestamp لكسر الكاش وإجبار السيرفر على إرسال أحدث نسخة
         const { data, error } = await db
           .from('tasks')
           .select('*')
@@ -204,7 +237,6 @@
 
         if (error || !data) return;
 
-        // فحص: هل حدث أي تغيير في المهام؟
         if (JSON.stringify(tasks) !== JSON.stringify(data)) {
           tasks = data;
           render();
@@ -214,10 +246,8 @@
       }
     }
 
-    // فحص دوري مستمر كل ثانيتين بدون توقف وبدون كاش
     setInterval(fetchTasksLive, 2000);
 
-    // فحص الجلسة المحفوظة
     window.addEventListener('DOMContentLoaded', () => {
       const savedUser = localStorage.getItem('team_logged_user');
       if (savedUser) initUserSession(JSON.parse(savedUser));
@@ -261,6 +291,18 @@
       select.innerHTML = USERS.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
     }
 
+    function formatTaskDateTime(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('ar-EG', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+
     async function addTask() {
       const title = document.getElementById('taskTitle').value.trim();
       const assigned_to = parseInt(document.getElementById('taskAssignee').value);
@@ -283,15 +325,17 @@
       closeModal();
       document.getElementById('taskTitle').value = '';
 
-      const { error } = await db.from('tasks').insert([newTask]);
+      const { data, error } = await db.from('tasks').insert([newTask]).select();
       if (error) return alert("خطأ: " + error.message);
 
-      // جلب فوري
+      const createdTaskId = data && data[0] ? `#${data[0].id}` : '';
       fetchTasksLive();
 
       if (sendWhatsApp) {
-        const message = `📢 *مهمة جديدة للفريق!*
-📌 *المهمة:* ${title}
+        const message = `📢 *مهمة جديدة للفريق! (${createdTaskId})*
+📌 *المهمة:* 
+${title}
+
 👤 *مطلوبة من:* ${assignee.name}
 ✍️ *بواسطة:* ${currentUser.name}
 ⚡ *الأولوية:* ${priorityText}
@@ -318,6 +362,52 @@
       fetchTasksLive();
     }
 
+    // ================= نقل المهمة لشخص آخر =================
+    function openReassignModal(taskId) {
+      taskBeingReassigned = tasks.find(t => t.id === taskId);
+      if (!taskBeingReassigned) return;
+
+      document.getElementById('reassignTaskTitle').innerText = `#${taskBeingReassigned.id}: ${taskBeingReassigned.title}`;
+      const select = document.getElementById('newAssigneeSelect');
+      
+      select.innerHTML = USERS
+        .filter(u => u.id !== taskBeingReassigned.assigned_to)
+        .map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+
+      document.getElementById('reassignModal').classList.remove('hidden');
+      document.getElementById('reassignModal').classList.add('flex');
+    }
+
+    function closeReassignModal() {
+      document.getElementById('reassignModal').classList.add('hidden');
+      document.getElementById('reassignModal').classList.remove('flex');
+      taskBeingReassigned = null;
+    }
+
+    async function confirmReassign() {
+      if (!taskBeingReassigned) return;
+      const newUserId = parseInt(document.getElementById('newAssigneeSelect').value);
+      const newAssignee = USERS.find(u => u.id === newUserId);
+
+      const { error } = await db.from('tasks').update({ 
+        assigned_to: newUserId 
+      }).eq('id', taskBeingReassigned.id);
+
+      if (error) {
+        alert("خطأ أثناء تحويل المهمة: " + error.message);
+      } else {
+        await db.from('task_comments').insert([{
+          task_id: taskBeingReassigned.id,
+          user_id: currentUser.id,
+          comment_text: `🔄 قام ${currentUser.name} بتحويل المهمة إلى: ${newAssignee.name}`
+        }]);
+
+        closeReassignModal();
+        fetchTasksLive();
+      }
+    }
+
+    // ================= دوال الفلترة والبحث =================
     function setUserFilter(filter) {
       userFilter = filter;
       document.getElementById('tabAllTasks').className = filter === 'all' 
@@ -336,6 +426,12 @@
       render();
     }
 
+    function setSearchQuery(val) {
+      // إزالة علامة الهاشتاج إذا كتبها المستخدم للبحث برقم المهمة مباشرة
+      searchQuery = val.trim().replace('#', '').toLowerCase();
+      render();
+    }
+
     function render() {
       const container = document.getElementById('tasksContainer');
       if (!container) return;
@@ -344,27 +440,25 @@
       document.getElementById('allCount').innerText = tasks.length;
       document.getElementById('myCount').innerText = myPendingCount;
 
-      // 1. لو المستخدم لسه مختارش حالة من القائمة:
-      if (statusFilter === 'none') {
-        container.innerHTML = `
-          <div class="py-16 text-center text-slate-400">
-            <div class="w-12 h-12 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-sm border border-slate-200/80 text-xl">
-              👆
-            </div>
-            <p class="text-xs font-bold text-slate-600 mb-1">اختر من القائمة المنسدلة في الأعلى</p>
-            <p class="text-[11px] text-slate-400">اختر (قيد الانتظار أو جاري العمل أو المنتهية) لعرض المهام الخاصة بها</p>
-          </div>
-        `;
-        return;
-      }
-
-      // 2. تطبيق الفلاتر المختارة
       let filtered = tasks;
+
+      // 1. فلتر (كل الفريق / مهامي)
       if (userFilter === 'my') {
         filtered = filtered.filter(t => t.assigned_to === currentUser?.id);
       }
-      if (statusFilter !== 'all') {
+
+      // 2. فلتر الحالة (إذا لم يكتب بحثاً مخصصاً، يطبق فلتر الحالة)
+      if (statusFilter !== 'all' && !searchQuery) {
         filtered = filtered.filter(t => t.status === statusFilter);
+      }
+
+      // 3. فلتر البحث برقم المهمة أو النص
+      if (searchQuery) {
+        filtered = filtered.filter(t => {
+          const matchId = t.id.toString() === searchQuery;
+          const matchTitle = t.title.toLowerCase().includes(searchQuery);
+          return matchId || matchTitle;
+        });
       }
 
       if (filtered.length === 0) {
@@ -380,14 +474,16 @@
       const creator = USERS.find(u => u.id === task.created_by);
       const isMyTask = task.assigned_to === currentUser?.id;
       const amICreator = task.created_by === currentUser?.id;
+      const canReassign = isMyTask || amICreator;
+      const formattedTime = formatTaskDateTime(task.created_at);
 
       let statusBadge = '';
       if (task.status === 'pending') {
-        statusBadge = `<span class="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 font-bold px-2 py-0.5 rounded-md">⏳ انتظار</span>`;
+        statusBadge = `<span class="text-[10px] bg-amber-50 text-amber-600 border border-amber-200 font-bold px-2 py-0.5 rounded-md">⏳ معلقة</span>`;
       } else if (task.status === 'in_progress') {
         statusBadge = `<span class="text-[10px] bg-blue-50 text-blue-600 border border-blue-200 font-bold px-2 py-0.5 rounded-md">🏃‍♂️ جاري العمل</span>`;
       } else {
-        statusBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-2 py-0.5 rounded-md">✅ تمت</span>`;
+        statusBadge = `<span class="text-[10px] bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold px-2 py-0.5 rounded-md">✅ منجزة</span>`;
       }
 
       let actionButtons = '';
@@ -412,7 +508,8 @@
       return `
         <div class="bg-white p-4 rounded-2xl border ${isMyTask && task.status !== 'done' ? 'border-blue-300 ring-2 ring-blue-50 shadow-md' : 'border-slate-200/80 shadow-sm'} flex flex-col gap-2.5 transition">
           <div class="flex justify-between items-start">
-            <div class="flex items-center gap-1.5">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-[10px] bg-slate-800 text-white font-mono font-bold px-2 py-0.5 rounded-md">#${task.id}</span>
               ${statusBadge}
               <span class="text-[10px] px-2 py-0.5 rounded-md font-bold ${task.priority === 'high' ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-slate-100 text-slate-500'}">
                 ${task.priority === 'high' ? '🔴 عاجل' : '🟡 عادي'}
@@ -420,7 +517,7 @@
             </div>
 
             <div class="flex items-center gap-2">
-              <span class="text-[10px] text-slate-400">من: ${creator ? creator.name : ''}</span>
+              <span class="text-[10px] text-slate-400">بواسطة: ${creator ? creator.name : ''}</span>
               ${amICreator ? `
                 <button onclick="deleteTask(${task.id})" title="حذف" class="text-slate-300 hover:text-red-500 text-xs transition">🗑️</button>
               ` : ''}
@@ -428,21 +525,32 @@
           </div>
 
           <div onclick="openCommentsModal(${task.id})" class="cursor-pointer group">
-            <p class="font-bold text-slate-800 text-sm leading-relaxed ${task.status === 'done' ? 'line-through text-slate-400' : ''} group-hover:text-blue-600 transition">
+            <p class="font-bold text-slate-800 text-sm leading-relaxed whitespace-pre-wrap ${task.status === 'done' ? 'line-through text-slate-400' : ''} group-hover:text-blue-600 transition">
               ${task.title}
             </p>
-            <span class="text-[11px] text-blue-500 font-semibold inline-flex items-center gap-1 mt-1">
-              💬 عرض التعليقات والملاحظات...
-            </span>
+            <div class="flex items-center justify-between mt-2 pt-1">
+              <span class="text-[11px] text-blue-500 font-semibold inline-flex items-center gap-1">
+                💬 الملاحظات والتعليقات...
+              </span>
+              ${formattedTime ? `<span class="text-[10px] text-slate-400 font-medium">🕒 ${formattedTime}</span>` : ''}
+            </div>
           </div>
 
           <div class="flex justify-between items-center pt-2.5 border-t border-slate-100 text-xs">
-            <div class="flex items-center gap-1.5">
-              <span class="text-slate-400 text-[10px]">مطلوبة من:</span>
-              <span class="inline-flex items-center gap-1 font-bold text-slate-700">
-                <span class="w-2 h-2 rounded-full ${assignee ? assignee.color : 'bg-gray-400'}"></span>
-                ${assignee ? assignee.name : ''} ${isMyTask ? '<span class="text-[10px] text-blue-600 font-extrabold">(أنت)</span>' : ''}
-              </span>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1.5">
+                <span class="text-slate-400 text-[10px]">مطلوبة من:</span>
+                <span class="inline-flex items-center gap-1 font-bold text-slate-700">
+                  <span class="w-2 h-2 rounded-full ${assignee ? assignee.color : 'bg-gray-400'}"></span>
+                  ${assignee ? assignee.name : ''} ${isMyTask ? '<span class="text-[10px] text-blue-600 font-extrabold">(أنت)</span>' : ''}
+                </span>
+              </div>
+              
+              ${canReassign ? `
+                <button onclick="openReassignModal(${task.id})" title="تحويل المهمة لشخص آخر" class="text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 px-2 py-1 rounded-lg border border-slate-200 transition">
+                  🔄 نقل
+                </button>
+              ` : ''}
             </div>
 
             <div>${actionButtons}</div>
@@ -456,7 +564,7 @@
       activeTaskForComments = tasks.find(t => t.id === taskId);
       if (!activeTaskForComments) return;
 
-      document.getElementById('commentTaskTitle').innerText = activeTaskForComments.title;
+      document.getElementById('commentTaskTitle').innerText = `#${activeTaskForComments.id} - ${activeTaskForComments.title}`;
       const badge = document.getElementById('commentTaskStatusBadge');
       if (activeTaskForComments.status === 'pending') {
         badge.className = "text-[10px] bg-amber-50 text-amber-600 border border-amber-200 font-bold px-2 py-0.5 rounded-md inline-block mb-1";
@@ -500,7 +608,7 @@
               <span class="text-[10px] font-bold text-slate-600">${author ? author.name : ''}</span>
               <span class="text-[9px] text-slate-400">${time}</span>
             </div>
-            <div class="p-2.5 rounded-2xl text-xs max-w-[85%] font-medium ${isMe ? 'bg-blue-600 text-white rounded-tl-none' : 'bg-slate-100 text-slate-800 rounded-tr-none'}">
+            <div class="p-2.5 rounded-2xl text-xs max-w-[85%] font-medium whitespace-pre-wrap ${isMe ? 'bg-blue-600 text-white rounded-tl-none' : 'bg-slate-100 text-slate-800 rounded-tr-none'}">
               ${c.comment_text}
             </div>
           </div>
