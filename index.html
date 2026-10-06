@@ -60,13 +60,16 @@
 
     <!-- أدوات الفرز والفلترة والبحث -->
     <div class="p-4 space-y-3">
-      <!-- تبديل: كل الفريق أو مهامي -->
-      <div class="flex bg-slate-200/80 p-1 rounded-2xl">
-        <button id="tabAllTasks" onclick="setUserFilter('all')" class="flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-blue-600 shadow-sm">
-          👥 كل الفريق (<span id="allCount">0</span>)
+      <!-- تبديل: الفريق / مهامي / مهام طلبتها -->
+      <div class="flex bg-slate-200/80 p-1 rounded-2xl gap-1">
+        <button id="tabAllTasks" onclick="setUserFilter('all')" class="flex-1 py-2 text-[11px] font-bold rounded-xl transition bg-white text-blue-600 shadow-sm">
+          👥 الفريق (<span id="allCount">0</span>)
         </button>
-        <button id="tabMyTasks" onclick="setUserFilter('my')" class="flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600">
-          🎯 مهامي أنا (<span id="myCount">0</span>)
+        <button id="tabMyTasks" onclick="setUserFilter('my')" class="flex-1 py-2 text-[11px] font-bold rounded-xl transition text-slate-600 hover:text-slate-900">
+          🎯 مهامي (<span id="myCount">0</span>)
+        </button>
+        <button id="tabRequestedTasks" onclick="setUserFilter('requested')" class="flex-1 py-2 text-[11px] font-bold rounded-xl transition text-slate-600 hover:text-slate-900">
+          📤 طلبتها (<span id="requestedCount">0</span>)
         </button>
       </div>
 
@@ -219,9 +222,9 @@
     ];
 
     let currentUser = null;
-    let userFilter = 'all';
+    let userFilter = 'all'; // 'all', 'my', 'requested'
     let statusFilter = 'pending';
-    let searchQuery = ''; // متغير البحث برقم المهمة أو النص
+    let searchQuery = '';
     let tasks = [];
     let activeTaskForComments = null;
     let taskBeingReassigned = null;
@@ -410,13 +413,12 @@ ${title}
     // ================= دوال الفلترة والبحث =================
     function setUserFilter(filter) {
       userFilter = filter;
-      document.getElementById('tabAllTasks').className = filter === 'all' 
-        ? "flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-blue-600 shadow-sm" 
-        : "flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600";
+      const activeClass = "flex-1 py-2 text-[11px] font-bold rounded-xl transition bg-white text-blue-600 shadow-sm";
+      const inactiveClass = "flex-1 py-2 text-[11px] font-bold rounded-xl transition text-slate-600 hover:text-slate-900";
 
-      document.getElementById('tabMyTasks').className = filter === 'my' 
-        ? "flex-1 py-2 text-xs font-bold rounded-xl transition bg-white text-blue-600 shadow-sm" 
-        : "flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600";
+      document.getElementById('tabAllTasks').className = filter === 'all' ? activeClass : inactiveClass;
+      document.getElementById('tabMyTasks').className = filter === 'my' ? activeClass : inactiveClass;
+      document.getElementById('tabRequestedTasks').className = filter === 'requested' ? activeClass : inactiveClass;
 
       render();
     }
@@ -427,7 +429,6 @@ ${title}
     }
 
     function setSearchQuery(val) {
-      // إزالة علامة الهاشتاج إذا كتبها المستخدم للبحث برقم المهمة مباشرة
       searchQuery = val.trim().replace('#', '').toLowerCase();
       render();
     }
@@ -436,23 +437,30 @@ ${title}
       const container = document.getElementById('tasksContainer');
       if (!container) return;
 
+      // حساب العدادات
       const myPendingCount = tasks.filter(t => t.assigned_to === currentUser?.id && t.status !== 'done').length;
+      const requestedPendingCount = tasks.filter(t => t.created_by === currentUser?.id && t.assigned_to !== currentUser?.id && t.status !== 'done').length;
+
       document.getElementById('allCount').innerText = tasks.length;
       document.getElementById('myCount').innerText = myPendingCount;
+      document.getElementById('requestedCount').innerText = requestedPendingCount;
 
       let filtered = tasks;
 
-      // 1. فلتر (كل الفريق / مهامي)
+      // 1. فلترة التبويبات الثلاثة
       if (userFilter === 'my') {
         filtered = filtered.filter(t => t.assigned_to === currentUser?.id);
+      } else if (userFilter === 'requested') {
+        // المهام التي أنشأتها أنا ومطلوبة من شخص آخر
+        filtered = filtered.filter(t => t.created_by === currentUser?.id && t.assigned_to !== currentUser?.id);
       }
 
-      // 2. فلتر الحالة (إذا لم يكتب بحثاً مخصصاً، يطبق فلتر الحالة)
+      // 2. فلتر الحالة
       if (statusFilter !== 'all' && !searchQuery) {
         filtered = filtered.filter(t => t.status === statusFilter);
       }
 
-      // 3. فلتر البحث برقم المهمة أو النص
+      // 3. فلتر البحث
       if (searchQuery) {
         filtered = filtered.filter(t => {
           const matchId = t.id.toString() === searchQuery;
@@ -517,7 +525,7 @@ ${title}
             </div>
 
             <div class="flex items-center gap-2">
-              <span class="text-[10px] text-slate-400">بواسطة: ${creator ? creator.name : ''}</span>
+              <span class="text-[10px] text-slate-400">بواسطة: ${creator ? (creator.id === currentUser?.id ? '<span class="text-blue-600 font-bold">أنت</span>' : creator.name) : ''}</span>
               ${amICreator ? `
                 <button onclick="deleteTask(${task.id})" title="حذف" class="text-slate-300 hover:text-red-500 text-xs transition">🗑️</button>
               ` : ''}
